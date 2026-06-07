@@ -7,6 +7,7 @@ import confetti from 'canvas-confetti'
 import { FlagImg } from '../lib/flags'
 import { playResult } from '../lib/sound'
 import { buildShareImage } from '../lib/shareImage'
+import { validateName } from '../lib/nameFilter'
 
 function b64Encode(str) {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))))
@@ -65,6 +66,7 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   const [autoSubmitted, setAutoSubmitted] = useState(false)
   const [challengeCopied, setChallengeCopied] = useState(false)
   const [imgState, setImgState] = useState('idle')
+  const [nameError, setNameError] = useState('')
   const isDaily = mode === 'daily'
   const inGroup = Boolean(groupCode)
 
@@ -100,6 +102,12 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   async function handleSubmit() {
     const trimmed = name.trim()
     if (!trimmed || submitState !== 'idle') return
+    const check = validateName(trimmed)
+    if (!check.ok) {
+      setNameError(check.reason)
+      return
+    }
+    setNameError('')
     saveName(trimmed)
     setSubmitState('submitting')
     try {
@@ -283,7 +291,7 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
                   placeholder="Your name"
                   maxLength={20}
                   value={name}
-                  onChange={e => setName(e.target.value)}
+                  onChange={e => { setName(e.target.value); if (nameError) setNameError('') }}
                   onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                   autoFocus={!getSavedName()}
                   className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-yellow-400"
@@ -296,6 +304,7 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
                   {submitState === 'error' ? 'Retry' : getSavedName() ? 'Update' : 'Save'}
                 </button>
               </div>
+              {nameError && <p className="text-red-400 text-xs">{nameError}</p>}
               {submitState === 'error' && <p className="text-red-400 text-xs">Failed — check your connection.</p>}
             </div>
           )}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createGroup, getGroup, isConfigured } from '../lib/supabase'
+import { validateName } from '../lib/nameFilter'
 
 const GROUP_KEY = 'ltt_group'
 
@@ -27,6 +28,8 @@ export default function GroupScreen({ onBack, onGroupChange }) {
 
   async function handleCreate() {
     if (!groupName.trim()) return
+    const check = validateName(groupName.trim())
+    if (!check.ok) { setError(check.reason); return }
     setLoading(true); setError('')
     try {
       const group = await createGroup(groupName.trim())
