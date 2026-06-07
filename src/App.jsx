@@ -4,12 +4,18 @@ import DraftScreen from './components/DraftScreen'
 import ResultScreen, { decodeSquad } from './components/ResultScreen'
 import LeaderboardScreen from './components/LeaderboardScreen'
 import PrivacyScreen from './components/PrivacyScreen'
+import HistoryScreen from './components/HistoryScreen'
+import GroupScreen, { getSavedGroup } from './components/GroupScreen'
+import RevealScreen from './components/RevealScreen'
 import formations from './data/formations.json'
 import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
 import euroA from './data/players_euro_a.json'
 import euroB from './data/players_euro_b.json'
 import { randomSeed } from './lib/seededRandom'
+import { getStreak, updateStreak } from './lib/streak'
+import { saveToHistory } from './lib/history'
+import { calculateTeamScore, getTier } from './utils/scoring'
 import './index.css'
 
 const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
@@ -49,6 +55,11 @@ export default function App() {
   const [config, setConfig] = useState(null)
   const [finalSlots, setFinalSlots] = useState(null)
   const [leaderboardSeed, setLeaderboardSeed] = useState(null)
+  const [leaderboardGroup, setLeaderboardGroup] = useState(null)
+  const [streak, setStreak] = useState(() => getStreak())
+  const [currentGroup, setCurrentGroup] = useState(() => getSavedGroup())
+  const [historyEntry, setHistoryEntry] = useState(null)
+  const [skipsUsed, setSkipsUsed] = useState(0)
 
   useEffect(() => {
     const hash = window.location.hash
@@ -60,49 +71,87 @@ export default function App() {
       return
     }
     const challenge = challengeFromHash(hash)
-    if (challenge) {
-      setConfig(challenge)
-      setScreen('draft')
-    }
+    if (challenge) { setConfig(challenge); setScreen('draft') }
   }, [])
 
   function handleSetupDone(cfg) {
-    // Attach a random seed to every game so challenge links always work
-    const seed = cfg.seed || randomSeed()
-    setConfig({ ...cfg, seed })
+    setConfig({ ...cfg, seed: cfg.seed || randomSeed() })
+    setSkipsUsed(0)
     setScreen('draft')
   }
 
-  function handleDraftDone(slots) {
+  function handleDraftDone(slots, skips = 0) {
+    const isHardcore = config?.mode === 'hardcore'
     setFinalSlots(slots)
-    setScreen('result')
+    setSkipsUsed(skips)
+
+    // Save to history
+    const score = calculateTeamScore(slots)
+    const tier = getTier(score)
+    saveToHistory({ slots, formation: config.formation, mode: config.mode, score, tier: tier.label, seed: config.seed })
+
+    // Update streak for daily
+    if (config?.mode === 'daily') {
+      const updated = updateStreak()
+      setStreak(updated)
+    }
+
+    // Hardcore gets reveal screen first
+    if (isHardcore) {
+      setScreen('reveal')
+    } else {
+      setScreen('result')
+    }
   }
 
   function handleRestart() {
-    setConfig(null)
-    setFinalSlots(null)
-    setLeaderboardSeed(null)
+    setConfig(null); setFinalSlots(null)
+    setLeaderboardSeed(null); setLeaderboardGroup(null)
+    setHistoryEntry(null); setSkipsUsed(0)
     window.location.hash = ''
     setScreen('setup')
   }
 
-  function handleLeaderboard(seed) {
+  function handleLeaderboard(seed, groupCode) {
     setLeaderboardSeed(seed || null)
+    setLeaderboardGroup(groupCode || null)
     setScreen('leaderboard')
   }
+
+  function handleViewSquad(entry) {
+    // Reconstruct slots from history entry
+    const formationDef = formations[entry.formation]
+    if (!formationDef) return
+    const slots = formationDef.slots.map(slot => {
+      const saved = entry.players.find(p => p.slotId === slot.id)
+      return { ...slot, player: saved ? saved.player : null }
+    })
+    setFinalSlots(slots)
+    setConfig({ formation: entry.formation, mode: entry.mode, seed: entry.seed })
+    setHistoryEntry(entry)
+    setScreen('result')
+  }
+
+  const configWithSkips = config ? { ...config, skipsUsed } : null
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       {screen === 'setup' && (
         <SetupScreen
           onStart={handleSetupDone}
-          onLeaderboard={() => handleLeaderboard(null)}
+          onLeaderboard={() => handleLeaderboard(null, currentGroup?.code)}
           onPrivacy={() => setScreen('privacy')}
+          onHistory={() => setScreen('history')}
+          onGroup={() => setScreen('group')}
+          streak={streak}
+          currentGroup={currentGroup}
         />
       )}
-      {screen === 'privacy' && <PrivacyScreen onBack={() => setScreen('setup')} />}
       {screen === 'draft' && (
         <DraftScreen config={config} onComplete={handleDraftDone} />
+      )}
+      {screen === 'reveal' && (
+        <RevealScreen slots={finalSlots} onDone={() => setScreen('result')} />
       )}
       {screen === 'result' && (
         <ResultScreen
@@ -110,14 +159,28 @@ export default function App() {
           formation={config?.formation}
           mode={config?.mode}
           seed={config?.seed}
+          config={configWithSkips}
+          streak={streak.streak}
+          groupCode={currentGroup?.code}
           onRestart={handleRestart}
-          onLeaderboard={() => handleLeaderboard(config?.seed)}
+          onLeaderboard={() => handleLeaderboard(config?.seed, currentGroup?.code)}
         />
       )}
       {screen === 'leaderboard' && (
         <LeaderboardScreen
           onBack={() => setScreen(finalSlots ? 'result' : 'setup')}
           challengeSeed={leaderboardSeed}
+          groupCode={leaderboardGroup}
+        />
+      )}
+      {screen === 'privacy' && <PrivacyScreen onBack={() => setScreen('setup')} />}
+      {screen === 'history' && (
+        <HistoryScreen onBack={() => setScreen('setup')} onViewSquad={handleViewSquad} />
+      )}
+      {screen === 'group' && (
+        <GroupScreen
+          onBack={() => setScreen('setup')}
+          onGroupChange={g => setCurrentGroup(g)}
         />
       )}
     </div>

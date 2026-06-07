@@ -19,29 +19,34 @@ const MODE_TABS = [
   { id: 'hardcore', label: '💀' },
 ]
 
-export default function LeaderboardScreen({ onBack, challengeSeed }) {
+export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) {
   const [scores, setScores] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [timeFilter, setTimeFilter] = useState(challengeSeed ? 'alltime' : 'alltime')
+  const [timeFilter, setTimeFilter] = useState('alltime')
   const [modeFilter, setModeFilter] = useState('all')
 
   useEffect(() => {
     if (!isConfigured) { setLoading(false); return }
     setLoading(true)
     setError(null)
-    fetchScores({ modeFilter, timeFilter, seed: challengeSeed || undefined })
+    fetchScores({
+      modeFilter,
+      timeFilter,
+      seed: challengeSeed || undefined,
+      groupCode: groupCode || undefined,
+    })
       .then(setScores)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [modeFilter, timeFilter, challengeSeed])
+  }, [modeFilter, timeFilter, challengeSeed, groupCode])
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-950 px-4 py-8 max-w-lg mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors text-sm">← Back</button>
         <h1 className="text-2xl font-extrabold text-white">
-          {challengeSeed ? '🤝 Challenge Results' : '🏅 Leaderboard'}
+          {groupCode ? '👥 Group Leaderboard' : challengeSeed ? '🤝 Challenge Results' : '🏅 Leaderboard'}
         </h1>
       </div>
 

@@ -231,7 +231,7 @@ export default function DraftScreen({ config, onComplete }) {
   const filledCount = slots.filter(s => s.player).length
 
   useEffect(() => {
-    if (filledCount === 11) setTimeout(() => onComplete(slots), 600)
+    if (filledCount === 11) setTimeout(() => onComplete(slots, MAX_SKIPS - skipsLeft), 600)
   }, [filledCount])
 
   function getEmptySlots(currentSlots = slots) {

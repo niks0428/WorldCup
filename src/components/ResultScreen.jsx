@@ -1,4 +1,5 @@
 import { calculateTeamScore, getTier, calculateGroupScores } from '../utils/scoring'
+import { getAchievements } from '../lib/achievements'
 import PitchView from './PitchView'
 import { useState, useEffect } from 'react'
 import { submitScore, isConfigured } from '../lib/supabase'
@@ -47,10 +48,11 @@ function fireConfetti(score) {
   }
 }
 
-export default function ResultScreen({ slots, formation, mode, seed, onRestart, onLeaderboard }) {
+export default function ResultScreen({ slots, formation, mode, seed, config, streak, groupCode, onRestart, onLeaderboard }) {
   const score = calculateTeamScore(slots)
   const tier = getTier(score)
   const groups = calculateGroupScores(slots)
+  const achievements = getAchievements(slots, config || { mode })
   const [copyState, setCopyState] = useState('idle')
   const [name, setName] = useState('')
   const [submitState, setSubmitState] = useState('idle')
@@ -74,6 +76,8 @@ export default function ResultScreen({ slots, formation, mode, seed, onRestart, 
         formation, mode: mode || 'classic', squadUrl,
         seed: seed || null,
         challengeDate: isDaily ? today : null,
+        groupCode: groupCode || null,
+        streak: streak || null,
       })
       setSubmitState('done')
     } catch {
@@ -172,6 +176,21 @@ export default function ResultScreen({ slots, formation, mode, seed, onRestart, 
             <StatCard label="Avg Rating" value={avgOverall} />
             <StatCard label="Formation" value={formation} />
           </div>
+
+          {/* Achievements */}
+          {achievements.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">Achievements</p>
+              <div className="flex flex-wrap gap-2">
+                {achievements.map(a => (
+                  <div key={a.id} className="flex items-center gap-1.5 bg-yellow-400/10 border border-yellow-400/30 rounded-lg px-2.5 py-1.5" title={a.desc}>
+                    <span className="text-base">{a.icon}</span>
+                    <span className="text-yellow-400 text-xs font-bold">{a.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">Your XI</p>
