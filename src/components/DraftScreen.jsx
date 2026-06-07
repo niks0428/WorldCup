@@ -4,10 +4,10 @@ import wcOld from '../data/players_wc_old.json'
 import euroA from '../data/players_euro_a.json'
 import euroB from '../data/players_euro_b.json'
 import formations from '../data/formations.json'
-
-const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
 import { filterSquadForSlot, getFitMultiplier } from '../utils/compatibility'
 import PitchView from './PitchView'
+
+const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
 
 export const FLAG_MAP = {
   Brazil: '🇧🇷', Argentina: '🇦🇷', France: '🇫🇷', Germany: '🇩🇪',
@@ -21,9 +21,8 @@ export const FLAG_MAP = {
   Iceland: '🇮🇸', Switzerland: '🇨🇭', Ukraine: '🇺🇦', Austria: '🇦🇹',
   Slovakia: '🇸🇰', Colombia: '🇨🇴', Ghana: '🇬🇭', USA: '🇺🇸',
   Cameroon: '🇨🇲', Algeria: '🇩🇿', Chile: '🇨🇱', Scotland: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-  Ireland: '🇮🇪', 'Northern Ireland': '🇬🇧', Poland: '🇵🇱', Hungary: '🇭🇺',
-  Finland: '🇫🇮', Albania: '🇦🇱', Slovenia: '🇸🇮', Georgia: '🇬🇪',
-  'North Macedonia': '🇲🇰',
+  Ireland: '🇮🇪', Poland: '🇵🇱', Hungary: '🇭🇺', Albania: '🇦🇱',
+  Slovenia: '🇸🇮', Georgia: '🇬🇪', 'North Macedonia': '🇲🇰',
 }
 
 function buildPairs() {
@@ -48,64 +47,129 @@ function shuffle(arr) {
   return a
 }
 
+const ALL_PAIRS = buildPairs()
+const ITEM_H = 60
+
+function ReelItem({ pair }) {
+  const flag = FLAG_MAP[pair.nation] || '🏴'
+  const comp = pair.tournament === 'EURO' ? 'EURO' : 'WC'
+  return (
+    <div
+      className="flex items-center justify-center gap-2 text-white font-bold select-none"
+      style={{ height: ITEM_H }}
+    >
+      <span className="text-3xl">{flag}</span>
+      <div className="text-center leading-tight">
+        <div className="text-sm">{pair.nation}</div>
+        <div className="text-xs font-normal text-yellow-400">{comp} {pair.year}</div>
+      </div>
+    </div>
+  )
+}
+
+function SlotReel({ finalPair, onDone }) {
+  const PRE = 28
+  const [items] = useState(() => {
+    const pre = shuffle(ALL_PAIRS).slice(0, PRE)
+    return [...pre, finalPair]
+  })
+
+  // Container shows 3 rows; middle row = selected
+  // Start: first item centered → offset = 0 (item[0] at top of viewport, viewport starts at -ITEM_H)
+  // We shift the list down by ITEM_H so item[0] appears in the middle slot
+  const startY = ITEM_H
+  // End: finalPair (index PRE) centered → top of list at -(PRE * ITEM_H) + ITEM_H
+  const endY = -(PRE * ITEM_H) + ITEM_H
+
+  const [y, setY] = useState(startY)
+  const [transitioning, setTransitioning] = useState(false)
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      setTransitioning(true)
+      setY(endY)
+    })
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  return (
+    <div
+      className="relative rounded-xl overflow-hidden border-2 border-yellow-400"
+      style={{ height: ITEM_H * 3, background: '#111827' }}
+    >
+      {/* gradient top */}
+      <div
+        className="absolute inset-x-0 top-0 z-10 pointer-events-none"
+        style={{ height: ITEM_H, background: 'linear-gradient(to bottom, #111827 30%, transparent)' }}
+      />
+      {/* gradient bottom */}
+      <div
+        className="absolute inset-x-0 bottom-0 z-10 pointer-events-none"
+        style={{ height: ITEM_H, background: 'linear-gradient(to top, #111827 30%, transparent)' }}
+      />
+      {/* selected band */}
+      <div
+        className="absolute inset-x-0 z-0 pointer-events-none border-y border-yellow-400/40"
+        style={{ top: ITEM_H, height: ITEM_H, background: 'rgba(250,204,21,0.06)' }}
+      />
+      {/* reel */}
+      <div
+        style={{
+          transform: `translateY(${y}px)`,
+          transition: transitioning
+            ? `transform 2.4s cubic-bezier(0.05, 0.9, 0.15, 1)`
+            : 'none',
+          willChange: 'transform',
+        }}
+        onTransitionEnd={onDone}
+      >
+        {items.map((item, i) => (
+          <ReelItem key={i} pair={item} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function DraftScreen({ config, onComplete }) {
   const formationDef = formations[config.formation]
   const [slots, setSlots] = useState(
     formationDef.slots.map(s => ({ ...s, player: null }))
   )
-  const [spinQueue] = useState(() => shuffle(buildPairs()))
+  const [spinQueue] = useState(() => shuffle(ALL_PAIRS))
   const [spinIndex, setSpinIndex] = useState(0)
-  const [spinning, setSpinning] = useState(false)
+  const [phase, setPhase] = useState('idle') // idle | spinning | picking
   const [currentPair, setCurrentPair] = useState(null)
   const [squad, setSquad] = useState([])
-  const [spinLabel, setSpinLabel] = useState(null)
-  const intervalRef = useRef(null)
-  const allPairsRef = useRef(buildPairs())
+  const [reelKey, setReelKey] = useState(0)
 
   const filledCount = slots.filter(s => s.player).length
   const nextEmptySlot = slots.find(s => !s.player)
 
   useEffect(() => {
-    if (filledCount === 11) {
-      setTimeout(() => onComplete(slots), 600)
-    }
+    if (filledCount === 11) setTimeout(() => onComplete(slots), 600)
   }, [filledCount])
 
-  function pairLabel(pair) {
-    const flag = FLAG_MAP[pair.nation] || '🏴'
-    const comp = pair.tournament === 'EURO' ? 'EURO' : 'WC'
-    return `${flag} ${pair.nation} ${comp} ${pair.year}`
+  function doSpin() {
+    if (phase !== 'idle' || !nextEmptySlot || spinIndex >= spinQueue.length) return
+    const pair = spinQueue[spinIndex]
+    setCurrentPair(pair)
+    setPhase('spinning')
+    setReelKey(k => k + 1)
   }
 
-  function doSpin() {
-    if (spinning || !nextEmptySlot || spinIndex >= spinQueue.length) return
-    setSpinning(true)
-    setSquad([])
-
-    let ticks = 0
-    const total = 18
-    const allPairs = allPairsRef.current
-    intervalRef.current = setInterval(() => {
-      const rnd = allPairs[Math.floor(Math.random() * allPairs.length)]
-      setSpinLabel(pairLabel(rnd))
-      ticks++
-      if (ticks >= total) {
-        clearInterval(intervalRef.current)
-        const pair = spinQueue[spinIndex]
-        setCurrentPair(pair)
-        setSpinLabel(pairLabel(pair))
-
-        const pool = allPlayers.filter(
-          p => p.nation === pair.nation && p.year === pair.year && p.tournament === pair.tournament
-        )
-        const available = config.mode === 'expert'
-          ? filterSquadForSlot(pool, nextEmptySlot.position)
-          : pool.filter(p => getFitMultiplier(nextEmptySlot.position, p.positions) >= 0.6)
-
-        setSquad(available.sort((a, b) => b.overall - a.overall))
-        setSpinning(false)
-      }
-    }, 65)
+  function handleSpinDone() {
+    if (!currentPair || !nextEmptySlot) return
+    const pool = allPlayers.filter(
+      p => p.nation === currentPair.nation &&
+           p.year === currentPair.year &&
+           p.tournament === currentPair.tournament
+    )
+    const available = config.mode === 'expert'
+      ? filterSquadForSlot(pool, nextEmptySlot.position)
+      : pool.filter(p => getFitMultiplier(nextEmptySlot.position, p.positions) >= 0.6)
+    setSquad(available.sort((a, b) => b.overall - a.overall))
+    setPhase('picking')
   }
 
   function pickPlayer(player) {
@@ -118,11 +182,12 @@ export default function DraftScreen({ config, onComplete }) {
     setSpinIndex(i => i + 1)
     setCurrentPair(null)
     setSquad([])
-    setSpinLabel(null)
+    setPhase('idle')
   }
 
   function fitLabel(player) {
-    const mult = getFitMultiplier(nextEmptySlot?.position, player.positions)
+    if (!nextEmptySlot) return { text: '', cls: '' }
+    const mult = getFitMultiplier(nextEmptySlot.position, player.positions)
     if (mult === 1.0) return { text: 'Natural', cls: 'text-green-400' }
     if (mult === 0.85) return { text: 'Compatible', cls: 'text-yellow-400' }
     return { text: 'Off-pos', cls: 'text-red-400' }
@@ -136,12 +201,12 @@ export default function DraftScreen({ config, onComplete }) {
           <span className="text-sm text-gray-400">{filledCount}/11</span>
         </div>
 
-        <div className="bg-gray-800 rounded-xl p-4 text-center">
-          <div className="text-xs uppercase tracking-widest text-gray-500 mb-2">
+        <div className="bg-gray-800 rounded-xl p-4">
+          <div className="text-xs uppercase tracking-widest text-gray-500 mb-3 text-center">
             Filling: <span className="text-white font-bold">{nextEmptySlot?.position ?? 'Done!'}</span>
           </div>
 
-          {!currentPair && !spinning && (
+          {phase === 'idle' && (
             <button
               onClick={doSpin}
               disabled={!nextEmptySlot}
@@ -151,14 +216,26 @@ export default function DraftScreen({ config, onComplete }) {
             </button>
           )}
 
-          {(spinning || spinLabel) && (
-            <div className={`text-xl font-bold py-2 ${spinning ? 'animate-pulse text-gray-400' : 'text-white'}`}>
-              {spinLabel}
+          {phase === 'spinning' && currentPair && (
+            <SlotReel
+              key={reelKey}
+              finalPair={currentPair}
+              onDone={handleSpinDone}
+            />
+          )}
+
+          {phase === 'picking' && currentPair && (
+            <div className="text-center py-2">
+              <div className="text-2xl">{FLAG_MAP[currentPair.nation] || '🏴'}</div>
+              <div className="text-white font-bold text-sm">{currentPair.nation}</div>
+              <div className="text-yellow-400 text-xs">
+                {currentPair.tournament === 'EURO' ? 'EURO' : 'WC'} {currentPair.year}
+              </div>
             </div>
           )}
         </div>
 
-        {squad.length > 0 && (
+        {phase === 'picking' && squad.length > 0 && (
           <div className="flex-1 overflow-y-auto space-y-2">
             <p className="text-xs uppercase tracking-widest text-gray-500">Pick one player</p>
             {squad.map((player, i) => {
@@ -175,11 +252,23 @@ export default function DraftScreen({ config, onComplete }) {
                   </div>
                   <div className="flex gap-2 mt-1 text-xs text-gray-400">
                     <span>{player.positions.join('/')}</span>
-                    <span className={fit.cls}>• {fit.text}</span>
+                    {fit.text && <span className={fit.cls}>• {fit.text}</span>}
                   </div>
                 </button>
               )
             })}
+          </div>
+        )}
+
+        {phase === 'picking' && squad.length === 0 && (
+          <div className="bg-gray-800 rounded-xl p-4 text-center text-gray-400 text-sm">
+            No eligible players for this slot from that squad.
+            <button
+              onClick={() => { setSpinIndex(i => i + 1); setPhase('idle'); setCurrentPair(null) }}
+              className="block mx-auto mt-3 px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs transition-colors"
+            >
+              Spin Again
+            </button>
           </div>
         )}
       </div>
