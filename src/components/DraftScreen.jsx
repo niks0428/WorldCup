@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { seededShuffle } from '../lib/seededRandom'
 import { calculateGroupScores, calculateTeamScore } from '../utils/scoring'
 import wcNew from '../data/players_wc_new.json'
@@ -120,6 +120,14 @@ function SlotReel({ finalPair, onDone }) {
   const endY = -(PRE * ITEM_H) + ITEM_H
   const [y, setY] = useState(startY)
   const [running, setRunning] = useState(false)
+  const doneRef = useRef(false)
+
+  // Guard so onDone only ever fires once (transitionend OR fallback timer)
+  function finish() {
+    if (doneRef.current) return
+    doneRef.current = true
+    onDone()
+  }
 
   useEffect(() => {
     const id = requestAnimationFrame(() => { setRunning(true); setY(endY) })
@@ -132,7 +140,10 @@ function SlotReel({ finalPair, onDone }) {
       gap *= 1.16        // slow down over time
       t += gap
     }
-    return () => { cancelAnimationFrame(id); timers.forEach(clearTimeout) }
+    // Fail-safe: if transitionend never fires (mobile tap, tab switch,
+    // composite glitch) force completion just after the animation ends.
+    const fallback = setTimeout(finish, 2900)
+    return () => { cancelAnimationFrame(id); timers.forEach(clearTimeout); clearTimeout(fallback) }
   }, [])
 
   return (
@@ -142,7 +153,7 @@ function SlotReel({ finalPair, onDone }) {
       <div className="absolute inset-x-0 z-0 pointer-events-none border-y border-yellow-400/40" style={{ top: ITEM_H, height: ITEM_H, background: 'rgba(250,204,21,0.06)' }} />
       <div
         style={{ transform: `translateY(${y}px)`, transition: running ? 'transform 2.4s cubic-bezier(0.05,0.9,0.15,1)' : 'none', willChange: 'transform' }}
-        onTransitionEnd={onDone}
+        onTransitionEnd={e => { if (e.propertyName === 'transform') finish() }}
       >
         {items.map((item, i) => <ReelItem key={i} pair={item} />)}
       </div>
@@ -262,6 +273,7 @@ export default function DraftScreen({ config, onComplete }) {
   }
 
   function handleSpinDone() {
+    if (!currentPair || phase === 'picking') return  // already resolved
     const pool = allPlayers.filter(
       p => p.nation === currentPair.nation &&
            p.year === currentPair.year &&
@@ -287,6 +299,7 @@ export default function DraftScreen({ config, onComplete }) {
   }
 
   function pickPlayer(player) {
+    if (phase !== 'picking') return  // guard against stray double-tap
     if (isHardcore) {
       playPlace()
       // Auto-place in assigned slot, pick next assigned slot
@@ -314,6 +327,9 @@ export default function DraftScreen({ config, onComplete }) {
   }
 
   function placePlayer(slotId) {
+    if (phase !== 'placing' || !selectedPlayer) return  // guard double-tap
+    const target = slots.find(s => s.id === slotId)
+    if (!target || target.player) return  // slot already filled
     playPlace()
     const nextSlots = slots.map(s =>
       s.id === slotId ? { ...s, player: selectedPlayer } : s
