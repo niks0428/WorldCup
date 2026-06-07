@@ -8,24 +8,12 @@ import euroB from '../data/players_euro_b.json'
 import formations from '../data/formations.json'
 import { filterSquadForSlot, getFitMultiplier } from '../utils/compatibility'
 import PitchView from './PitchView'
+import { FlagImg, FLAG_EMOJI } from '../lib/flags'
 
 const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
 
-export const FLAG_MAP = {
-  Brazil: '🇧🇷', Argentina: '🇦🇷', France: '🇫🇷', Germany: '🇩🇪',
-  'West Germany': '🇩🇪', Spain: '🇪🇸', England: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', Portugal: '🇵🇹',
-  Italy: '🇮🇹', Netherlands: '🇳🇱', Croatia: '🇭🇷', Uruguay: '🇺🇾',
-  Belgium: '🇧🇪', Mexico: '🇲🇽', Senegal: '🇸🇳', Japan: '🇯🇵',
-  Morocco: '🇲🇦', Australia: '🇦🇺', USSR: '🇷🇺', Russia: '🇷🇺',
-  Yugoslavia: '🇷🇸', Serbia: '🇷🇸', Denmark: '🇩🇰', Sweden: '🇸🇪',
-  'Czech Republic': '🇨🇿', Czechia: '🇨🇿', Turkey: '🇹🇷', Greece: '🇬🇷',
-  Romania: '🇷🇴', Bulgaria: '🇧🇬', 'South Korea': '🇰🇷', Wales: '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
-  Iceland: '🇮🇸', Switzerland: '🇨🇭', Ukraine: '🇺🇦', Austria: '🇦🇹',
-  Slovakia: '🇸🇰', Colombia: '🇨🇴', Ghana: '🇬🇭', USA: '🇺🇸',
-  Cameroon: '🇨🇲', Algeria: '🇩🇿', Chile: '🇨🇱', Scotland: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-  Ireland: '🇮🇪', Poland: '🇵🇱', Hungary: '🇭🇺', Albania: '🇦🇱',
-  Slovenia: '🇸🇮', Georgia: '🇬🇪', 'North Macedonia': '🇲🇰',
-}
+// Re-export for components that import FLAG_MAP from here
+export { FLAG_EMOJI as FLAG_MAP } from '../lib/flags'
 
 function buildPairs() {
   const seen = new Set()
@@ -78,7 +66,7 @@ function PlayerPickCard({ player, fitLabel, fitCls, onClick, hideStats }) {
       <div className="flex justify-between items-start" style={{ marginBottom: hideStats ? 0 : '0.5rem' }}>
         <div className="min-w-0 pr-2">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-base shrink-0">{FLAG_MAP[player.nation] || '🏴'}</span>
+            <span className="shrink-0 w-6 h-4 rounded-sm overflow-hidden inline-flex"><FlagImg nation={player.nation} className="w-full h-full object-cover" /></span>
             <span className="font-semibold text-white text-sm truncate">{player.name}</span>
           </div>
           <div className="text-xs text-gray-400 mt-0.5">
@@ -111,7 +99,7 @@ function PlayerPickCard({ player, fitLabel, fitCls, onClick, hideStats }) {
 }
 
 function ReelItem({ pair }) {
-  const flag = FLAG_MAP[pair.nation] || '🏴'
+  const flag = FLAG_EMOJI[pair.nation] || '🏴'
   const comp = pair.tournament === 'EURO' ? 'EURO' : 'WC'
   return (
     <div className="flex items-center justify-center gap-2 text-white font-bold select-none" style={{ height: ITEM_H }}>
@@ -385,7 +373,7 @@ export default function DraftScreen({ config, onComplete }) {
 
           {(phase === 'picking' || phase === 'placing') && currentPair && (
             <div className="text-center py-1">
-              <div className="text-2xl">{FLAG_MAP[currentPair.nation] || '🏴'}</div>
+              <div className="flex justify-center"><span className="w-10 h-7 rounded overflow-hidden inline-flex shadow"><FlagImg nation={currentPair.nation} className="w-full h-full object-cover" /></span></div>
               <div className="text-white font-bold text-sm">{currentPair.nation}</div>
               <div className="text-yellow-400 text-xs">
                 {currentPair.tournament === 'EURO' ? 'EURO' : 'WC'} {currentPair.year}
@@ -459,7 +447,7 @@ export default function DraftScreen({ config, onComplete }) {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-lg">{FLAG_MAP[selectedPlayer.nation] || '🏴'}</span>
+                    <span className="w-7 h-5 rounded overflow-hidden inline-flex shadow shrink-0"><FlagImg nation={selectedPlayer.nation} className="w-full h-full object-cover" /></span>
                     <span className="text-white font-bold text-sm">{selectedPlayer.name}</span>
                   </div>
                   <div className="text-gray-400 text-xs mt-0.5">{selectedPlayer.positions.join(' / ')} · OVR {selectedPlayer.overall}</div>

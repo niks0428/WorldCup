@@ -1,4 +1,4 @@
-import { FLAG_MAP } from './DraftScreen'
+import { FlagImg } from '../lib/flags'
 
 export default function PitchView({ slots, phase, compatibleSlotIds = [], assignedSlotId, onPlacePlayer }) {
   return (
@@ -86,8 +86,8 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace }) {
       className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5"
       style={{ left, top }}
     >
-      <div className="w-11 h-11 rounded-full bg-yellow-400 border-2 border-white shadow-lg flex items-center justify-center text-lg">
-        {FLAG_MAP[slot.player.nation] || '⚽'}
+      <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-lg bg-gray-800">
+        <FlagImg nation={slot.player.nation} className="w-full h-full object-cover" />
       </div>
       <div className="bg-black/70 rounded px-1.5 py-0.5 text-center max-w-[72px]">
         <div className="text-white text-[10px] font-bold leading-tight truncate">
