@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import SetupScreen from './components/SetupScreen'
 import DraftScreen from './components/DraftScreen'
 import ResultScreen, { decodeSquad } from './components/ResultScreen'
+import LeaderboardScreen from './components/LeaderboardScreen'
 import formations from './data/formations.json'
 import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
@@ -23,17 +24,12 @@ function squadFromHash(hash) {
   if (!hash.startsWith('#s=')) return null
   const data = decodeSquad(hash.slice(3))
   if (!data || !formations[data.f]) return null
-
   const lookup = buildPlayerLookup()
-  const formationSlots = formations[data.f].slots
-
-  const slots = formationSlots.map(slot => {
+  const slots = formations[data.f].slots.map(slot => {
     const entry = data.s.find(s => s.i === slot.id)
     if (!entry) return { ...slot, player: null }
-    const player = lookup[`${entry.n}|${entry.na}|${entry.y}|${entry.t}`] || null
-    return { ...slot, player }
+    return { ...slot, player: lookup[`${entry.n}|${entry.na}|${entry.y}|${entry.t}`] || null }
   })
-
   return { slots, formation: data.f, mode: data.m }
 }
 
@@ -70,7 +66,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      {screen === 'setup' && <SetupScreen onStart={handleSetupDone} />}
+      {screen === 'setup' && (
+        <SetupScreen onStart={handleSetupDone} onLeaderboard={() => setScreen('leaderboard')} />
+      )}
       {screen === 'draft' && (
         <DraftScreen config={config} onComplete={handleDraftDone} />
       )}
@@ -80,7 +78,11 @@ export default function App() {
           formation={config?.formation}
           mode={config?.mode}
           onRestart={handleRestart}
+          onLeaderboard={() => setScreen('leaderboard')}
         />
+      )}
+      {screen === 'leaderboard' && (
+        <LeaderboardScreen onBack={() => setScreen(finalSlots ? 'result' : 'setup')} />
       )}
     </div>
   )

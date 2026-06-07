@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { isConfigured } from '../lib/supabase'
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3', '4-5-1']
 const MODES = [
@@ -22,7 +23,7 @@ const MODES = [
   },
 ]
 
-export default function SetupScreen({ onStart }) {
+export default function SetupScreen({ onStart, onLeaderboard }) {
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
 
@@ -93,6 +94,15 @@ export default function SetupScreen({ onStart }) {
         >
           {mode === 'hardcore' ? '💀 Start Hardcore' : 'Start Drafting →'}
         </button>
+
+        {isConfigured && (
+          <button
+            onClick={onLeaderboard}
+            className="w-full py-3 rounded-2xl border-2 border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white font-bold transition-colors"
+          >
+            🏅 Leaderboard
+          </button>
+        )}
       </div>
     </div>
   )

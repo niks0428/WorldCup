@@ -14,14 +14,14 @@ Build a fully playable browser-based football draft game (World Cup edition). Pl
 
 | # | Phase | Status | Notes |
 |---|-------|--------|-------|
-| 0 | Project scaffold (Vite + React + Tailwind) | `pending` | |
-| 1 | Data layer — player JSON + formations JSON (2 tournaments: 2022, 2018) | `pending` | |
-| 2 | Scoring & compatibility utils (pure functions) | `pending` | |
-| 3 | SetupScreen — mode + formation picker | `pending` | |
-| 4 | DraftScreen — spin mechanic, squad filter, slot assignment | `pending` | |
-| 5 | PitchView — SVG/div pitch with player slots | `pending` | |
-| 6 | ResultScreen — score calc, tier display, share button | `pending` | |
-| 7 | Polish — spin animation, responsive layout, remaining tournament data | `pending` | |
+| 0 | Project scaffold (Vite + React + Tailwind) | `complete` | Deployed to gh-pages |
+| 1 | Data layer — player JSON + formations JSON (2 tournaments: 2022, 2018) | `complete` | 16 nations, ~180 players |
+| 2 | Scoring & compatibility utils (pure functions) | `complete` | |
+| 3 | SetupScreen — mode + formation picker | `complete` | |
+| 4 | DraftScreen — spin mechanic, squad filter, slot assignment | `complete` | |
+| 5 | PitchView — SVG/div pitch with player slots | `complete` | |
+| 6 | ResultScreen — score calc, tier display, share button | `complete` | |
+| 7 | Polish — spin animation, responsive layout, remaining tournament data | `pending` | 2014/2010/2006/2002/1998/1994 data + spin anim |
 
 ## File Structure (target)
 ```
