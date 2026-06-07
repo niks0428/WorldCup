@@ -9,6 +9,7 @@ import formations from '../data/formations.json'
 import { filterSquadForSlot, getFitMultiplier } from '../utils/compatibility'
 import PitchView from './PitchView'
 import { FlagImg, FLAG_EMOJI } from '../lib/flags'
+import { playSpin, playTick, playPick, playPlace } from '../lib/sound'
 
 const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
 
@@ -122,7 +123,16 @@ function SlotReel({ finalPair, onDone }) {
 
   useEffect(() => {
     const id = requestAnimationFrame(() => { setRunning(true); setY(endY) })
-    return () => cancelAnimationFrame(id)
+    // Decelerating tick sounds matching the ease-out curve (~2.4s)
+    const timers = []
+    let t = 0.05
+    let gap = 0.045
+    while (t < 2.3) {
+      timers.push(setTimeout(playTick, t * 1000))
+      gap *= 1.16        // slow down over time
+      t += gap
+    }
+    return () => { cancelAnimationFrame(id); timers.forEach(clearTimeout) }
   }, [])
 
   return (
@@ -238,9 +248,13 @@ export default function DraftScreen({ config, onComplete }) {
     return currentSlots.filter(s => !s.player)
   }
 
+  // Names already on the pitch — used to prevent duplicate players
+  const placedNames = new Set(slots.filter(s => s.player).map(s => s.player.name))
+
   function doSpin() {
     if (phase !== 'idle' || spinIndex >= spinQueue.length) return
     if (isHardcore && !assignedSlot) return
+    playSpin()
     const pair = spinQueue[spinIndex]
     setCurrentPair(pair)
     setPhase('spinning')
@@ -251,7 +265,8 @@ export default function DraftScreen({ config, onComplete }) {
     const pool = allPlayers.filter(
       p => p.nation === currentPair.nation &&
            p.year === currentPair.year &&
-           p.tournament === currentPair.tournament
+           p.tournament === currentPair.tournament &&
+           !placedNames.has(p.name)   // no duplicate players across eras
     )
 
     let available
@@ -259,9 +274,6 @@ export default function DraftScreen({ config, onComplete }) {
       // Show players that can play in the assigned position (0.85+), fall back to all if none
       const compatible = pool.filter(p => getFitMultiplier(assignedSlot.position, p.positions) >= 0.85)
       available = compatible.length > 0 ? compatible : pool
-    } else if (config.mode === 'expert') {
-      const empties = getEmptySlots()
-      available = pool.filter(p => empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.85))
     } else {
       const empties = getEmptySlots()
       available = pool.filter(p => empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.85))
@@ -276,6 +288,7 @@ export default function DraftScreen({ config, onComplete }) {
 
   function pickPlayer(player) {
     if (isHardcore) {
+      playPlace()
       // Auto-place in assigned slot, pick next assigned slot
       const nextSlots = slots.map(s =>
         s.id === assignedSlot.id ? { ...s, player } : s
@@ -288,6 +301,7 @@ export default function DraftScreen({ config, onComplete }) {
       setAssignedSlot(empties.length > 0 ? pickRandom(empties) : null)
       setPhase('idle')
     } else {
+      playPick()
       setSelectedPlayer(player)
       setSquad([])
       setPhase('placing')
@@ -295,6 +309,7 @@ export default function DraftScreen({ config, onComplete }) {
   }
 
   function placePlayer(slotId) {
+    playPlace()
     const nextSlots = slots.map(s =>
       s.id === slotId ? { ...s, player: selectedPlayer } : s
     )
@@ -303,6 +318,12 @@ export default function DraftScreen({ config, onComplete }) {
     setCurrentPair(null)
     setSelectedPlayer(null)
     setPhase('idle')
+  }
+
+  // Undo: clear a filled slot during idle phase
+  function clearSlot(slotId) {
+    if (phase !== 'idle') return
+    setSlots(prev => prev.map(s => s.id === slotId ? { ...s, player: null } : s))
   }
 
   function skipSpin() {
@@ -364,6 +385,9 @@ export default function DraftScreen({ config, onComplete }) {
                   ? `Spin for ${assignedSlot.position} 💀`
                   : 'Spin ⚽'}
               </button>
+              {filledCount > 0 && filledCount < 11 && (
+                <p className="text-center text-gray-500 text-xs mt-2">Tap a player on the pitch to remove them</p>
+              )}
             </>
           )}
 
@@ -481,6 +505,8 @@ export default function DraftScreen({ config, onComplete }) {
           compatibleSlotIds={compatibleSlotIds}
           assignedSlotId={isHardcore && phase === 'idle' ? assignedSlot?.id : null}
           onPlacePlayer={placePlayer}
+          onClearSlot={clearSlot}
+          canClear={phase === 'idle'}
         />
       </div>
     </div>

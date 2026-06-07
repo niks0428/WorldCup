@@ -1,6 +1,6 @@
 import { FlagImg } from '../lib/flags'
 
-export default function PitchView({ slots, phase, compatibleSlotIds = [], assignedSlotId, onPlacePlayer }) {
+export default function PitchView({ slots, phase, compatibleSlotIds = [], assignedSlotId, onPlacePlayer, onClearSlot, canClear }) {
   return (
     <div
       className="relative w-full rounded-2xl overflow-hidden"
@@ -28,13 +28,15 @@ export default function PitchView({ slots, phase, compatibleSlotIds = [], assign
           compatible={compatibleSlotIds.includes(slot.id)}
           assigned={assignedSlotId === slot.id}
           onPlace={onPlacePlayer}
+          onClear={onClearSlot}
+          canClear={canClear}
         />
       ))}
     </div>
   )
 }
 
-function PlayerCard({ slot, phase, compatible, assigned, onPlace }) {
+function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, canClear }) {
   const left = `${slot.x}%`
   const top = `${slot.y}%`
   const isPlacing = phase === 'placing'
@@ -82,12 +84,18 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace }) {
   }
 
   return (
-    <div
-      className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5"
-      style={{ left, top }}
+    <button
+      onClick={() => canClear && onClear?.(slot.id)}
+      disabled={!canClear}
+      className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 group"
+      style={{ left, top, cursor: canClear ? 'pointer' : 'default' }}
+      title={canClear ? 'Tap to remove' : undefined}
     >
-      <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white shadow-lg bg-gray-800">
+      <div className={`relative w-11 h-11 rounded-full overflow-hidden border-2 shadow-lg bg-gray-800 transition-all ${canClear ? 'border-white group-hover:border-red-400 group-hover:scale-105' : 'border-white'}`}>
         <FlagImg nation={slot.player.nation} className="w-full h-full object-cover" />
+        {canClear && (
+          <span className="absolute inset-0 hidden group-hover:flex items-center justify-center bg-red-500/70 text-white text-base font-bold">✕</span>
+        )}
       </div>
       <div className="bg-black/70 rounded px-1.5 py-0.5 text-center max-w-[72px]">
         <div className="text-white text-[10px] font-bold leading-tight truncate">
@@ -95,6 +103,6 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace }) {
         </div>
         <div className="text-yellow-400 text-[10px] font-bold">{slot.player.overall}</div>
       </div>
-    </div>
+    </button>
   )
 }

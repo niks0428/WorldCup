@@ -16,6 +16,7 @@ import euroA from './data/players_euro_a.json'
 import euroB from './data/players_euro_b.json'
 import { randomSeed } from './lib/seededRandom'
 import { getStreak, updateStreak } from './lib/streak'
+import { markDailyDone } from './lib/daily'
 import { saveToHistory } from './lib/history'
 import { calculateTeamScore, getTier } from './utils/scoring'
 import { getAchievements, saveAchievements } from './lib/achievements'
@@ -98,6 +99,7 @@ export default function App() {
     if (config?.mode === 'daily') {
       updatedStreak = updateStreak()
       setStreak(updatedStreak)
+      markDailyDone()
     }
 
     // Save achievements

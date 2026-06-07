@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react'
 import { submitScore, isConfigured } from '../lib/supabase'
 import confetti from 'canvas-confetti'
 import { FlagImg } from '../lib/flags'
+import { playResult } from '../lib/sound'
+import { buildShareImage } from '../lib/shareImage'
 
 function b64Encode(str) {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))))
@@ -62,6 +64,7 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   const [submitState, setSubmitState] = useState('idle')
   const [autoSubmitted, setAutoSubmitted] = useState(false)
   const [challengeCopied, setChallengeCopied] = useState(false)
+  const [imgState, setImgState] = useState('idle')
   const isDaily = mode === 'daily'
   const inGroup = Boolean(groupCode)
 
@@ -79,7 +82,7 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   }
 
   useEffect(() => {
-    const t = setTimeout(() => fireConfetti(score), 400)
+    const t = setTimeout(() => { fireConfetti(score); playResult(score) }, 400)
     return () => clearTimeout(t)
   }, [])
 
@@ -127,6 +130,33 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
     navigator.clipboard.writeText(url).then(() => {
       setChallengeCopied(true); setTimeout(() => setChallengeCopied(false), 2500)
     })
+  }
+
+  async function handleShareImage() {
+    setImgState('working')
+    try {
+      const blob = await buildShareImage({ slots, formation, mode, score, tier, groups })
+      const file = new File([blob], 'lift-the-trophy.png', { type: 'image/png' })
+      // Prefer native share sheet (mobile), else download
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Lift the Trophy',
+          text: `${tier.emoji} ${tier.label} — score ${score}`,
+        })
+        setImgState('idle')
+      } else {
+        const a = document.createElement('a')
+        a.href = URL.createObjectURL(blob)
+        a.download = 'lift-the-trophy.png'
+        a.click()
+        URL.revokeObjectURL(a.href)
+        setImgState('done')
+        setTimeout(() => setImgState('idle'), 2500)
+      }
+    } catch {
+      setImgState('idle')
+    }
   }
 
   const starters = slots.filter(s => s.player)
@@ -283,8 +313,11 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
           )}
 
           {/* Share */}
-          <button onClick={handleShareText} className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold transition-colors">
-            {copyState === 'text' ? '✓ Copied!' : '📋 Share Result'}
+          <button onClick={handleShareImage} disabled={imgState === 'working'} className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 disabled:opacity-60 text-gray-900 font-bold transition-colors">
+            {imgState === 'working' ? 'Generating…' : imgState === 'done' ? '✓ Image saved!' : '📸 Share Image'}
+          </button>
+          <button onClick={handleShareText} className="w-full py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition-colors">
+            {copyState === 'text' ? '✓ Copied!' : '📋 Copy Result + Link'}
           </button>
 
           <div className="grid grid-cols-2 gap-2">

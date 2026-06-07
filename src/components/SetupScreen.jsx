@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { isConfigured } from '../lib/supabase'
 import { todaySeed } from '../lib/seededRandom'
+import { isDailyDoneToday, timeUntilNextDaily } from '../lib/daily'
+import { isMuted, toggleMuted } from '../lib/sound'
 import Logo from './Logo'
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3', '4-5-1']
@@ -13,12 +15,28 @@ const MODES = [
 export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, streak, currentGroup }) {
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
+  const [dailyDone] = useState(() => isDailyDoneToday())
+  const [countdown, setCountdown] = useState(() => timeUntilNextDaily().label)
+  const [muted, setMuted] = useState(() => isMuted())
+
+  useEffect(() => {
+    if (!dailyDone) return
+    const t = setInterval(() => setCountdown(timeUntilNextDaily().label), 30000)
+    return () => clearInterval(t)
+  }, [dailyDone])
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
   const hasStreak = streak?.streak > 0
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10">
+    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10 relative">
+      <button
+        onClick={() => setMuted(toggleMuted())}
+        className="absolute top-4 right-4 w-10 h-10 rounded-full border border-gray-700 hover:border-gray-500 text-lg flex items-center justify-center transition-colors"
+        title={muted ? 'Unmute' : 'Mute'}
+      >
+        {muted ? '🔇' : '🔊'}
+      </button>
       <div className="text-center mb-6">
         <div className="flex justify-center mb-3">
           <Logo size={100} />
@@ -39,21 +57,35 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
 
       <div className="w-full max-w-md space-y-4">
         {/* Daily Challenge */}
-        <button
-          onClick={() => onStart({ mode: 'daily', formation, seed: todaySeed(), isDaily: true })}
-          className="w-full rounded-2xl border-2 border-yellow-400/60 bg-yellow-400/10 hover:bg-yellow-400/20 p-4 text-left transition-all group"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-yellow-400 font-extrabold text-base">⭐ Daily Challenge</span>
-                {hasStreak && <span className="text-xs text-orange-400 font-bold">🔥 {streak.streak}</span>}
+        {dailyDone ? (
+          <div className="w-full rounded-2xl border-2 border-gray-700 bg-gray-900 p-4 text-left">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-gray-400 font-extrabold text-base">✅ Daily Complete</span>
+                  {hasStreak && <span className="text-xs text-orange-400 font-bold">🔥 {streak.streak}</span>}
+                </div>
+                <div className="text-gray-500 text-xs">Next challenge in {countdown}</div>
               </div>
-              <div className="text-gray-400 text-xs">Everyone gets the same spins · {today}</div>
             </div>
-            <span className="text-yellow-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
           </div>
-        </button>
+        ) : (
+          <button
+            onClick={() => onStart({ mode: 'daily', formation, seed: todaySeed(), isDaily: true })}
+            className="w-full rounded-2xl border-2 border-yellow-400/60 bg-yellow-400/10 hover:bg-yellow-400/20 p-4 text-left transition-all group"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-yellow-400 font-extrabold text-base">⭐ Daily Challenge</span>
+                  {hasStreak && <span className="text-xs text-orange-400 font-bold">🔥 {streak.streak}</span>}
+                </div>
+                <div className="text-gray-400 text-xs">Everyone gets the same spins · {today}</div>
+              </div>
+              <span className="text-yellow-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
+            </div>
+          </button>
+        )}
 
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-gray-800" />
