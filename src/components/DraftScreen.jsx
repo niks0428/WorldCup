@@ -1,19 +1,42 @@
 import { useState, useEffect, useRef } from 'react'
-import allPlayers from '../data/players.json'
+import wcNew from '../data/players_wc_new.json'
+import wcOld from '../data/players_wc_old.json'
+import euroA from '../data/players_euro_a.json'
+import euroB from '../data/players_euro_b.json'
 import formations from '../data/formations.json'
+
+const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
 import { filterSquadForSlot, getFitMultiplier } from '../utils/compatibility'
 import PitchView from './PitchView'
 
-const ALL_PAIRS = []
-const NATIONS = [...new Set(allPlayers.map(p => p.nation))]
-const YEARS = [...new Set(allPlayers.map(p => p.year))].sort((a, b) => b - a)
+export const FLAG_MAP = {
+  Brazil: '🇧🇷', Argentina: '🇦🇷', France: '🇫🇷', Germany: '🇩🇪',
+  'West Germany': '🇩🇪', Spain: '🇪🇸', England: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', Portugal: '🇵🇹',
+  Italy: '🇮🇹', Netherlands: '🇳🇱', Croatia: '🇭🇷', Uruguay: '🇺🇾',
+  Belgium: '🇧🇪', Mexico: '🇲🇽', Senegal: '🇸🇳', Japan: '🇯🇵',
+  Morocco: '🇲🇦', Australia: '🇦🇺', USSR: '🇷🇺', Russia: '🇷🇺',
+  Yugoslavia: '🇷🇸', Serbia: '🇷🇸', Denmark: '🇩🇰', Sweden: '🇸🇪',
+  'Czech Republic': '🇨🇿', Czechia: '🇨🇿', Turkey: '🇹🇷', Greece: '🇬🇷',
+  Romania: '🇷🇴', Bulgaria: '🇧🇬', 'South Korea': '🇰🇷', Wales: '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+  Iceland: '🇮🇸', Switzerland: '🇨🇭', Ukraine: '🇺🇦', Austria: '🇦🇹',
+  Slovakia: '🇸🇰', Colombia: '🇨🇴', Ghana: '🇬🇭', USA: '🇺🇸',
+  Cameroon: '🇨🇲', Algeria: '🇩🇿', Chile: '🇨🇱', Scotland: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  Ireland: '🇮🇪', 'Northern Ireland': '🇬🇧', Poland: '🇵🇱', Hungary: '🇭🇺',
+  Finland: '🇫🇮', Albania: '🇦🇱', Slovenia: '🇸🇮', Georgia: '🇬🇪',
+  'North Macedonia': '🇲🇰',
+}
 
-for (const nation of NATIONS) {
-  for (const year of YEARS) {
-    if (allPlayers.some(p => p.nation === nation && p.year === year)) {
-      ALL_PAIRS.push({ nation, year })
+function buildPairs() {
+  const seen = new Set()
+  const pairs = []
+  for (const p of allPlayers) {
+    const key = `${p.nation}|${p.year}|${p.tournament}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      pairs.push({ nation: p.nation, year: p.year, tournament: p.tournament })
     }
   }
+  return pairs
 }
 
 function shuffle(arr) {
@@ -25,26 +48,19 @@ function shuffle(arr) {
   return a
 }
 
-const FLAG_MAP = {
-  Brazil: '🇧🇷', Argentina: '🇦🇷', France: '🇫🇷', Germany: '🇩🇪',
-  Spain: '🇪🇸', England: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', Portugal: '🇵🇹', Italy: '🇮🇹',
-  Netherlands: '🇳🇱', Croatia: '🇭🇷', Uruguay: '🇺🇾', Belgium: '🇧🇪',
-  Mexico: '🇲🇽', Senegal: '🇸🇳', Japan: '🇯🇵', Morocco: '🇲🇦',
-  Australia: '🇦🇺',
-}
-
 export default function DraftScreen({ config, onComplete }) {
   const formationDef = formations[config.formation]
   const [slots, setSlots] = useState(
     formationDef.slots.map(s => ({ ...s, player: null }))
   )
-  const [spinQueue] = useState(() => shuffle(ALL_PAIRS))
+  const [spinQueue] = useState(() => shuffle(buildPairs()))
   const [spinIndex, setSpinIndex] = useState(0)
   const [spinning, setSpinning] = useState(false)
   const [currentPair, setCurrentPair] = useState(null)
   const [squad, setSquad] = useState([])
   const [spinLabel, setSpinLabel] = useState(null)
   const intervalRef = useRef(null)
+  const allPairsRef = useRef(buildPairs())
 
   const filledCount = slots.filter(s => s.player).length
   const nextEmptySlot = slots.find(s => !s.player)
@@ -55,6 +71,12 @@ export default function DraftScreen({ config, onComplete }) {
     }
   }, [filledCount])
 
+  function pairLabel(pair) {
+    const flag = FLAG_MAP[pair.nation] || '🏴'
+    const comp = pair.tournament === 'EURO' ? 'EURO' : 'WC'
+    return `${flag} ${pair.nation} ${comp} ${pair.year}`
+  }
+
   function doSpin() {
     if (spinning || !nextEmptySlot || spinIndex >= spinQueue.length) return
     setSpinning(true)
@@ -62,17 +84,20 @@ export default function DraftScreen({ config, onComplete }) {
 
     let ticks = 0
     const total = 18
+    const allPairs = allPairsRef.current
     intervalRef.current = setInterval(() => {
-      const idx = Math.floor(Math.random() * spinQueue.length)
-      setSpinLabel(`${FLAG_MAP[spinQueue[idx].nation] || '🏴'} ${spinQueue[idx].nation} ${spinQueue[idx].year}`)
+      const rnd = allPairs[Math.floor(Math.random() * allPairs.length)]
+      setSpinLabel(pairLabel(rnd))
       ticks++
       if (ticks >= total) {
         clearInterval(intervalRef.current)
         const pair = spinQueue[spinIndex]
         setCurrentPair(pair)
-        setSpinLabel(`${FLAG_MAP[pair.nation] || '🏴'} ${pair.nation} ${pair.year}`)
+        setSpinLabel(pairLabel(pair))
 
-        const pool = allPlayers.filter(p => p.nation === pair.nation && p.year === pair.year)
+        const pool = allPlayers.filter(
+          p => p.nation === pair.nation && p.year === pair.year && p.tournament === pair.tournament
+        )
         const available = config.mode === 'expert'
           ? filterSquadForSlot(pool, nextEmptySlot.position)
           : pool.filter(p => getFitMultiplier(nextEmptySlot.position, p.positions) >= 0.6)
@@ -127,7 +152,7 @@ export default function DraftScreen({ config, onComplete }) {
           )}
 
           {(spinning || spinLabel) && (
-            <div className={`text-2xl font-bold py-2 ${spinning ? 'animate-pulse text-gray-400' : 'text-white'}`}>
+            <div className={`text-xl font-bold py-2 ${spinning ? 'animate-pulse text-gray-400' : 'text-white'}`}>
               {spinLabel}
             </div>
           )}

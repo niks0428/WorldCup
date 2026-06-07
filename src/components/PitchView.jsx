@@ -1,10 +1,4 @@
-const FLAG_MAP = {
-  Brazil: '🇧🇷', Argentina: '🇦🇷', France: '🇫🇷', Germany: '🇩🇪',
-  Spain: '🇪🇸', England: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', Portugal: '🇵🇹', Italy: '🇮🇹',
-  Netherlands: '🇳🇱', Croatia: '🇭🇷', Uruguay: '🇺🇾', Belgium: '🇧🇪',
-  Mexico: '🇲🇽', Senegal: '🇸🇳', Japan: '🇯🇵', Morocco: '🇲🇦',
-  Australia: '🇦🇺',
-}
+import { FLAG_MAP } from './DraftScreen'
 
 export default function PitchView({ slots }) {
   return (
@@ -17,7 +11,6 @@ export default function PitchView({ slots }) {
         boxShadow: '0 0 60px rgba(0,0,0,0.5)',
       }}
     >
-      {/* Pitch markings */}
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 150" preserveAspectRatio="none">
         <rect x="5" y="5" width="90" height="140" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
         <line x1="5" y1="75" x2="95" y2="75" stroke="rgba(255,255,255,0.25)" strokeWidth="0.8" />
