@@ -1,17 +1,63 @@
-import { calculateTeamScore, getTier, buildShareText } from '../utils/scoring'
+import { calculateTeamScore, getTier } from '../utils/scoring'
 import PitchView from './PitchView'
 import { useState } from 'react'
 
-export default function ResultScreen({ slots, formation, onRestart }) {
+// Safe base64 encode/decode that handles Unicode player names
+function b64Encode(str) {
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))))
+}
+function b64Decode(str) {
+  return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''))
+}
+
+export function encodeSquad(slots, formation, mode) {
+  const data = {
+    f: formation,
+    m: mode || 'classic',
+    s: slots.filter(s => s.player).map(s => ({
+      i: s.id,
+      n: s.player.name,
+      na: s.player.nation,
+      y: s.player.year,
+      t: s.player.tournament,
+    })),
+  }
+  return b64Encode(JSON.stringify(data))
+}
+
+export function decodeSquad(encoded) {
+  try {
+    return JSON.parse(b64Decode(encoded))
+  } catch {
+    return null
+  }
+}
+
+function buildSquadUrl(slots, formation, mode) {
+  const encoded = encodeSquad(slots, formation, mode)
+  const base = window.location.href.split('#')[0]
+  return `${base}#s=${encoded}`
+}
+
+export default function ResultScreen({ slots, formation, mode, onRestart }) {
   const score = calculateTeamScore(slots)
   const tier = getTier(score)
-  const [copied, setCopied] = useState(false)
+  const [copyState, setCopyState] = useState('idle') // idle | text | link
 
-  function handleShare() {
-    const text = buildShareText(tier)
+  function handleShareText() {
+    const url = buildSquadUrl(slots, formation, mode)
+    const text = `I built a World Cup XI that reached the ${tier.label}. ${tier.emoji} Lift the Trophy — ${url}`
     navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopyState('text')
+      setTimeout(() => setCopyState('idle'), 2500)
+    })
+  }
+
+  function handleShareLink() {
+    const url = buildSquadUrl(slots, formation, mode)
+    navigator.clipboard.writeText(url).then(() => {
+      setCopyState('link')
+      setTimeout(() => setCopyState('idle'), 2500)
     })
   }
 
@@ -53,10 +99,16 @@ export default function ResultScreen({ slots, formation, onRestart }) {
 
         <div className="space-y-3">
           <button
-            onClick={handleShare}
+            onClick={handleShareText}
             className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold transition-colors"
           >
-            {copied ? '✓ Copied!' : '📋 Share Result'}
+            {copyState === 'text' ? '✓ Copied!' : '📋 Share Result'}
+          </button>
+          <button
+            onClick={handleShareLink}
+            className="w-full py-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold transition-colors"
+          >
+            {copyState === 'link' ? '✓ Link copied!' : '🔗 Copy Squad Link'}
           </button>
           <button
             onClick={onRestart}

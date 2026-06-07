@@ -63,7 +63,7 @@ function barColor(v) {
   return 'bg-yellow-400'
 }
 
-function PlayerPickCard({ player, fitLabel, fitCls, onClick }) {
+function PlayerPickCard({ player, fitLabel, fitCls, onClick, hideStats }) {
   const stats = [
     ['PAC', player.pac], ['SHO', player.sho], ['PAS', player.pas],
     ['DRI', player.dri], ['DEF', player.def], ['PHY', player.phy],
@@ -73,8 +73,7 @@ function PlayerPickCard({ player, fitLabel, fitCls, onClick }) {
       onClick={onClick}
       className="w-full text-left bg-gray-800 hover:bg-gray-700 rounded-xl p-3 transition-colors"
     >
-      {/* Header */}
-      <div className="flex justify-between items-start mb-2">
+      <div className="flex justify-between items-start" style={{ marginBottom: hideStats ? 0 : '0.5rem' }}>
         <div className="min-w-0 pr-2">
           <div className="font-semibold text-white text-sm truncate">{player.name}</div>
           <div className="text-xs text-gray-400 mt-0.5">
@@ -82,23 +81,26 @@ function PlayerPickCard({ player, fitLabel, fitCls, onClick }) {
             {fitLabel && <span className={`ml-1 ${fitCls}`}>· {fitLabel}</span>}
           </div>
         </div>
-        <div className={`text-2xl font-extrabold shrink-0 ${statColor(player.overall)}`}>
-          {player.overall}
-        </div>
+        {!hideStats && (
+          <div className={`text-2xl font-extrabold shrink-0 ${statColor(player.overall)}`}>
+            {player.overall}
+          </div>
+        )}
       </div>
 
-      {/* Stat bars */}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-        {stats.map(([label, val]) => (
-          <div key={label} className="flex items-center gap-1">
-            <span className="text-[9px] font-bold text-gray-500 w-5 shrink-0">{label}</span>
-            <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full ${barColor(val)}`} style={{ width: `${val}%` }} />
+      {!hideStats && (
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          {stats.map(([label, val]) => (
+            <div key={label} className="flex items-center gap-1">
+              <span className="text-[9px] font-bold text-gray-500 w-5 shrink-0">{label}</span>
+              <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${barColor(val)}`} style={{ width: `${val}%` }} />
+              </div>
+              <span className={`text-[10px] font-bold w-5 text-right tabular-nums ${statColor(val)}`}>{val}</span>
             </div>
-            <span className={`text-[10px] font-bold w-5 text-right tabular-nums ${statColor(val)}`}>{val}</span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </button>
   )
 }
@@ -204,7 +206,10 @@ export default function DraftScreen({ config, onComplete }) {
       available = pool.filter(p => empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.85))
     }
 
-    setSquad(available.sort((a, b) => b.overall - a.overall))
+    const blindMode = isHardcore || config.mode === 'expert'
+    setSquad(available.sort((a, b) =>
+      blindMode ? a.name.localeCompare(b.name) : b.overall - a.overall
+    ))
     setPhase('picking')
   }
 
@@ -366,6 +371,7 @@ export default function DraftScreen({ config, onComplete }) {
                   fitLabel={fitLabel}
                   fitCls={fitCls}
                   onClick={() => pickPlayer(player)}
+                  hideStats={isHardcore || config.mode === 'expert'}
                 />
               )
             })}
