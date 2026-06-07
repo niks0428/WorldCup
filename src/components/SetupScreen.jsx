@@ -121,11 +121,14 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy }) {
         )}
       </div>
 
-      <p className="mt-8 text-gray-700 text-xs">
-        <button onClick={onPrivacy} className="hover:text-gray-500 transition-colors underline underline-offset-2">
+      <div className="mt-8 text-center space-y-2">
+        <p className="text-gray-700 text-xs max-w-sm mx-auto leading-relaxed">
+          This is an independent fan-made game. It is not affiliated with, endorsed by, or associated with FIFA, UEFA, EA Sports, or any football organisation or governing body. Player names and ratings are used for entertainment purposes only.
+        </p>
+        <button onClick={onPrivacy} className="text-gray-600 hover:text-gray-400 text-xs transition-colors underline underline-offset-2">
           Privacy Policy
         </button>
-      </p>
+      </div>
     </div>
   )
 }
