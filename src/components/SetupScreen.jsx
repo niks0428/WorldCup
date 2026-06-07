@@ -1,0 +1,74 @@
+import { useState } from 'react'
+
+const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3', '4-5-1']
+const MODES = [
+  { id: 'classic', label: 'Classic', desc: 'Full squad available — more choice, easier to fill slots.' },
+  { id: 'expert',  label: 'Expert',  desc: 'Named XI only — harder, purer, more World Cup nostalgia.' },
+]
+
+export default function SetupScreen({ onStart }) {
+  const [mode, setMode] = useState('classic')
+  const [formation, setFormation] = useState('4-3-3')
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen px-4 py-12">
+      <div className="text-center mb-10">
+        <div className="text-6xl mb-4">🏆</div>
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-3">
+          Lift the Trophy
+        </h1>
+        <p className="text-gray-400 text-lg max-w-md mx-auto">
+          Spin real World Cup squads, draft your ultimate XI, and find out if your team could go all the way.
+        </p>
+      </div>
+
+      <div className="w-full max-w-md space-y-8">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-3">Mode</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {MODES.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setMode(m.id)}
+                className={`rounded-xl border-2 p-4 text-left transition-all ${
+                  mode === m.id
+                    ? 'border-yellow-400 bg-yellow-400/10 text-white'
+                    : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                <div className="font-bold text-base mb-1">{m.label}</div>
+                <div className="text-xs leading-snug">{m.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-3">Formation</h2>
+          <div className="grid grid-cols-4 gap-2">
+            {FORMATIONS.map(f => (
+              <button
+                key={f}
+                onClick={() => setFormation(f)}
+                className={`rounded-lg border-2 py-2 text-sm font-mono font-bold transition-all ${
+                  formation === f
+                    ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
+                    : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={() => onStart({ mode, formation })}
+          className="w-full py-4 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-extrabold text-lg transition-colors shadow-lg shadow-yellow-400/20"
+        >
+          Start Drafting →
+        </button>
+      </div>
+    </div>
+  )
+}
