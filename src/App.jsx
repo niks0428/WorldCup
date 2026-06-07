@@ -7,6 +7,7 @@ import PrivacyScreen from './components/PrivacyScreen'
 import HistoryScreen from './components/HistoryScreen'
 import GroupScreen, { getSavedGroup } from './components/GroupScreen'
 import RevealScreen from './components/RevealScreen'
+import HowItWorksScreen from './components/HowItWorksScreen'
 import formations from './data/formations.json'
 import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
@@ -143,6 +144,7 @@ export default function App() {
           onPrivacy={() => setScreen('privacy')}
           onHistory={() => setScreen('history')}
           onGroup={() => setScreen('group')}
+          onHowItWorks={() => setScreen('howto')}
           streak={streak}
           currentGroup={currentGroup}
         />
@@ -177,6 +179,7 @@ export default function App() {
       {screen === 'history' && (
         <HistoryScreen onBack={() => setScreen('setup')} onViewSquad={handleViewSquad} />
       )}
+      {screen === 'howto' && <HowItWorksScreen onBack={() => setScreen('setup')} />}
       {screen === 'group' && (
         <GroupScreen
           onBack={() => setScreen('setup')}
