@@ -32,6 +32,20 @@ export function calculateTeamScore(draftedSlots) {
   return Math.round(Math.min(99, Math.max(0, score)))
 }
 
+export function calculateGroupScores(draftedSlots) {
+  const groups = { GK: [], DEF: [], MID: [], ATT: [] }
+  for (const slot of draftedSlots) {
+    if (!slot.player) continue
+    const mult = getFitMultiplier(slot.position, slot.player.positions)
+    groups[slot.group].push(slot.player.overall * mult)
+  }
+  const out = {}
+  for (const [g, vals] of Object.entries(groups)) {
+    out[g] = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null
+  }
+  return out
+}
+
 export function getTier(teamScore) {
   return TIERS.find(t => teamScore >= t.min) ?? TIERS[TIERS.length - 1]
 }

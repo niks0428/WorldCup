@@ -1,4 +1,4 @@
-import { calculateTeamScore, getTier } from '../utils/scoring'
+import { calculateTeamScore, getTier, calculateGroupScores } from '../utils/scoring'
 import PitchView from './PitchView'
 import { useState, useEffect } from 'react'
 import { submitScore, isConfigured } from '../lib/supabase'
@@ -50,6 +50,7 @@ function fireConfetti(score) {
 export default function ResultScreen({ slots, formation, mode, seed, onRestart, onLeaderboard }) {
   const score = calculateTeamScore(slots)
   const tier = getTier(score)
+  const groups = calculateGroupScores(slots)
   const [copyState, setCopyState] = useState('idle')
   const [name, setName] = useState('')
   const [submitState, setSubmitState] = useState('idle')
@@ -122,6 +123,48 @@ export default function ResultScreen({ slots, formation, mode, seed, onRestart, 
             <div className="text-2xl font-extrabold text-white mb-1">{tier.label}</div>
             <div className="text-gray-400 text-sm">
               Team Score: <span className="text-yellow-400 font-bold text-lg">{score}</span>
+            </div>
+          </div>
+
+          {/* Group breakdown */}
+          <div className="bg-gray-800 rounded-2xl p-4 mb-6">
+            <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Team Breakdown</p>
+            <div className="space-y-2">
+              {[
+                { key: 'GK',  label: 'Goalkeeper' },
+                { key: 'DEF', label: 'Defence' },
+                { key: 'MID', label: 'Midfield' },
+                { key: 'ATT', label: 'Attack' },
+              ].map(({ key, label }) => {
+                const val = groups[key]
+                const textCls = val > 80 ? 'text-green-400' : val <= 50 ? 'text-red-500' : 'text-yellow-400'
+                const barCls  = val > 80 ? 'bg-green-400'  : val <= 50 ? 'bg-red-500'  : 'bg-yellow-400'
+                return (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 w-20 shrink-0">{label}</span>
+                    <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                      {val != null && (
+                        <div className={`h-full rounded-full ${barCls}`} style={{ width: `${val}%` }} />
+                      )}
+                    </div>
+                    <span className={`text-sm font-extrabold w-7 text-right tabular-nums shrink-0 ${val != null ? textCls : 'text-gray-600'}`}>
+                      {val ?? '—'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-700 flex items-center gap-2">
+              <span className="text-xs text-gray-400 w-20 shrink-0">Overall</span>
+              <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${score > 80 ? 'bg-green-400' : score <= 50 ? 'bg-red-500' : 'bg-yellow-400'}`}
+                  style={{ width: `${score}%` }}
+                />
+              </div>
+              <span className={`text-sm font-extrabold w-7 text-right tabular-nums shrink-0 ${score > 80 ? 'text-green-400' : score <= 50 ? 'text-red-500' : 'text-yellow-400'}`}>
+                {score}
+              </span>
             </div>
           </div>
 
