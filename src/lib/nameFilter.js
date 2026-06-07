@@ -18,22 +18,23 @@ const SUBS = {
   '5': 's', '$': 's', '7': 't', '8': 'b', '9': 'g', '+': 't',
 }
 
-function normalise(str) {
+function base(str) {
   let s = str.toLowerCase()
-  // apply substitutions
   s = s.replace(/[01!345$789@+]/g, ch => SUBS[ch] || ch)
-  // strip everything except letters
-  s = s.replace(/[^a-z]/g, '')
-  // collapse repeated letters (e.g. "fuuuck" -> "fuck")
-  s = s.replace(/(.)\1+/g, '$1')
-  return s
+  return s.replace(/[^a-z]/g, '')
+}
+function collapse(s) {
+  return s.replace(/(.)\1+/g, '$1')
 }
 
 export function isNameClean(name) {
   if (!name || !name.trim()) return false
-  const norm = normalise(name)
-  if (!norm) return false
-  return !BLOCKED.some(word => norm.includes(word))
+  const form1 = base(name)            // "fuuuck" stays, "nigga" stays
+  const form2 = collapse(form1)        // "fuuuck" -> "fuck", "nigga" -> "niga"
+  if (!form1) return false
+  // A word is a hit if it appears in the raw form, OR its own collapsed
+  // form appears in the collapsed input (catches both "nigga" and "fuuuck").
+  return !BLOCKED.some(word => form1.includes(word) || form2.includes(collapse(word)))
 }
 
 // Returns { ok, reason } for UI feedback
