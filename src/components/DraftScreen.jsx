@@ -52,6 +52,57 @@ const ALL_PAIRS = buildPairs()
 const ITEM_H = 60
 const MAX_SKIPS = 3
 
+function statColor(v) {
+  if (v > 80) return 'text-green-400'
+  if (v <= 50) return 'text-red-500'
+  return 'text-yellow-400'
+}
+function barColor(v) {
+  if (v > 80) return 'bg-green-400'
+  if (v <= 50) return 'bg-red-500'
+  return 'bg-yellow-400'
+}
+
+function PlayerPickCard({ player, fitLabel, fitCls, onClick }) {
+  const stats = [
+    ['PAC', player.pac], ['SHO', player.sho], ['PAS', player.pas],
+    ['DRI', player.dri], ['DEF', player.def], ['PHY', player.phy],
+  ]
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-gray-800 hover:bg-gray-700 rounded-xl p-3 transition-colors"
+    >
+      {/* Header */}
+      <div className="flex justify-between items-start mb-2">
+        <div className="min-w-0 pr-2">
+          <div className="font-semibold text-white text-sm truncate">{player.name}</div>
+          <div className="text-xs text-gray-400 mt-0.5">
+            {player.positions.join('/')}
+            {fitLabel && <span className={`ml-1 ${fitCls}`}>· {fitLabel}</span>}
+          </div>
+        </div>
+        <div className={`text-2xl font-extrabold shrink-0 ${statColor(player.overall)}`}>
+          {player.overall}
+        </div>
+      </div>
+
+      {/* Stat bars */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+        {stats.map(([label, val]) => (
+          <div key={label} className="flex items-center gap-1">
+            <span className="text-[9px] font-bold text-gray-500 w-5 shrink-0">{label}</span>
+            <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${barColor(val)}`} style={{ width: `${val}%` }} />
+            </div>
+            <span className={`text-[10px] font-bold w-5 text-right tabular-nums ${statColor(val)}`}>{val}</span>
+          </div>
+        ))}
+      </div>
+    </button>
+  )
+}
+
 function ReelItem({ pair }) {
   const flag = FLAG_MAP[pair.nation] || '🏴'
   const comp = pair.tournament === 'EURO' ? 'EURO' : 'WC'
@@ -150,7 +201,7 @@ export default function DraftScreen({ config, onComplete }) {
       available = pool.filter(p => empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.85))
     } else {
       const empties = getEmptySlots()
-      available = pool.filter(p => empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.6))
+      available = pool.filter(p => empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.85))
     }
 
     setSquad(available.sort((a, b) => b.overall - a.overall))
@@ -199,7 +250,7 @@ export default function DraftScreen({ config, onComplete }) {
   }
 
   const compatibleSlotIds = selectedPlayer
-    ? slots.filter(s => !s.player && getFitMultiplier(s.position, selectedPlayer.positions) >= 0.6).map(s => s.id)
+    ? slots.filter(s => !s.player && getFitMultiplier(s.position, selectedPlayer.positions) >= 0.85).map(s => s.id)
     : []
 
   const accentCls = isHardcore ? 'border-red-500 bg-red-500/10' : 'border-yellow-400 bg-yellow-400/10'
@@ -309,20 +360,13 @@ export default function DraftScreen({ config, onComplete }) {
               const fitCls = bestFit.mult === 1.0 ? 'text-green-400' : bestFit.mult >= 0.85 ? 'text-yellow-400' : 'text-orange-400'
               const fitLabel = bestFit.mult === 1.0 ? 'Natural' : bestFit.mult >= 0.85 ? 'Compatible' : 'Off-pos'
               return (
-                <button
+                <PlayerPickCard
                   key={i}
+                  player={player}
+                  fitLabel={fitLabel}
+                  fitCls={fitCls}
                   onClick={() => pickPlayer(player)}
-                  className="w-full text-left bg-gray-800 hover:bg-gray-700 rounded-xl p-3 transition-colors"
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-white text-sm">{player.name}</span>
-                    <span className="text-yellow-400 font-bold text-sm">{player.overall}</span>
-                  </div>
-                  <div className="flex gap-2 mt-1 text-xs text-gray-400">
-                    <span>{player.positions.join('/')}</span>
-                    <span className={fitCls}>• {fitLabel}</span>
-                  </div>
-                </button>
+                />
               )
             })}
           </div>
