@@ -1,5 +1,5 @@
-const CACHE = 'ltt-v1'
-const PRECACHE = ['/WorldCup/', '/WorldCup/index.html']
+const CACHE = 'ltt-v2'
+const PRECACHE = ['/', '/index.html']
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()))

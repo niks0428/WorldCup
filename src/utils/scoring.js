@@ -50,6 +50,6 @@ export function getTier(teamScore) {
   return TIERS.find(t => teamScore >= t.min) ?? TIERS[TIERS.length - 1]
 }
 
-export function buildShareText(tier, url = 'https://niks0428.github.io/WorldCup') {
+export function buildShareText(tier, url = 'https://liftthetrophy.online') {
   return `I built a World Cup XI that reached the ${tier.label}. ${tier.emoji} Lift the Trophy — ${url}`
 }
