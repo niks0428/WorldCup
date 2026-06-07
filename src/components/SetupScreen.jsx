@@ -9,7 +9,7 @@ const MODES = [
   { id: 'hardcore', label: 'Hardcore', badge: '💀', desc: 'Random position assigned. No stats, no skips.' },
 ]
 
-export default function SetupScreen({ onStart, onLeaderboard }) {
+export default function SetupScreen({ onStart, onLeaderboard, onPrivacy }) {
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
 
@@ -120,6 +120,12 @@ export default function SetupScreen({ onStart, onLeaderboard }) {
           </button>
         )}
       </div>
+
+      <p className="mt-8 text-gray-700 text-xs">
+        <button onClick={onPrivacy} className="hover:text-gray-500 transition-colors underline underline-offset-2">
+          Privacy Policy
+        </button>
+      </p>
     </div>
   )
 }

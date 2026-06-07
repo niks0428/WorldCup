@@ -3,6 +3,7 @@ import SetupScreen from './components/SetupScreen'
 import DraftScreen from './components/DraftScreen'
 import ResultScreen, { decodeSquad } from './components/ResultScreen'
 import LeaderboardScreen from './components/LeaderboardScreen'
+import PrivacyScreen from './components/PrivacyScreen'
 import formations from './data/formations.json'
 import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
@@ -93,8 +94,13 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       {screen === 'setup' && (
-        <SetupScreen onStart={handleSetupDone} onLeaderboard={() => handleLeaderboard(null)} />
+        <SetupScreen
+          onStart={handleSetupDone}
+          onLeaderboard={() => handleLeaderboard(null)}
+          onPrivacy={() => setScreen('privacy')}
+        />
       )}
+      {screen === 'privacy' && <PrivacyScreen onBack={() => setScreen('setup')} />}
       {screen === 'draft' && (
         <DraftScreen config={config} onComplete={handleDraftDone} />
       )}
