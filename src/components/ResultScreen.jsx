@@ -3,6 +3,7 @@ import PitchView from './PitchView'
 import { useState, useEffect } from 'react'
 import { submitScore, isConfigured } from '../lib/supabase'
 import confetti from 'canvas-confetti'
+import { FLAG_MAP } from './DraftScreen'
 
 function b64Encode(str) {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))))
@@ -132,10 +133,11 @@ export default function ResultScreen({ slots, formation, mode, seed, onRestart, 
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">Your XI</p>
             {slots.map(slot => slot.player && (
-              <div key={slot.id} className="flex items-center gap-3 bg-gray-800 rounded-lg px-3 py-2">
-                <span className="text-xs text-gray-500 w-8">{slot.position}</span>
+              <div key={slot.id} className="flex items-center gap-2 bg-gray-800 rounded-lg px-3 py-2">
+                <span className="text-xs text-gray-500 w-8 shrink-0">{slot.position}</span>
+                <span className="text-base shrink-0">{FLAG_MAP[slot.player.nation] || '🏴'}</span>
                 <span className="text-sm text-white flex-1 truncate">{slot.player.name}</span>
-                <span className="text-yellow-400 font-bold text-sm">{slot.player.overall}</span>
+                <span className="text-yellow-400 font-bold text-sm shrink-0">{slot.player.overall}</span>
               </div>
             ))}
           </div>

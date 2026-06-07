@@ -76,7 +76,10 @@ function PlayerPickCard({ player, fitLabel, fitCls, onClick, hideStats }) {
     >
       <div className="flex justify-between items-start" style={{ marginBottom: hideStats ? 0 : '0.5rem' }}>
         <div className="min-w-0 pr-2">
-          <div className="font-semibold text-white text-sm truncate">{player.name}</div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-base shrink-0">{FLAG_MAP[player.nation] || '🏴'}</span>
+            <span className="font-semibold text-white text-sm truncate">{player.name}</span>
+          </div>
           <div className="text-xs text-gray-400 mt-0.5">
             {player.positions.join('/')}
             {fitLabel && <span className={`ml-1 ${fitCls}`}>· {fitLabel}</span>}
@@ -388,10 +391,12 @@ export default function DraftScreen({ config, onComplete }) {
               <p className="text-xs uppercase tracking-widest text-gray-500 mb-2 text-center">Tap a slot on the pitch</p>
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-white font-bold text-sm">{selectedPlayer.name}</div>
-                  <div className="text-gray-400 text-xs">{selectedPlayer.positions.join(' / ')} · OVR {selectedPlayer.overall}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-lg">{FLAG_MAP[selectedPlayer.nation] || '🏴'}</span>
+                    <span className="text-white font-bold text-sm">{selectedPlayer.name}</span>
+                  </div>
+                  <div className="text-gray-400 text-xs mt-0.5">{selectedPlayer.positions.join(' / ')} · OVR {selectedPlayer.overall}</div>
                 </div>
-                <div className="text-2xl">{FLAG_MAP[currentPair?.nation] || '⚽'}</div>
               </div>
               {compatibleSlotIds.length === 0 && (
                 <p className="text-red-400 text-xs mt-2 text-center">No compatible empty slots remaining.</p>
