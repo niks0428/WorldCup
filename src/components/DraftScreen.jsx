@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { seededShuffle } from '../lib/seededRandom'
+import { calculateGroupScores, calculateTeamScore } from '../utils/scoring'
 import wcNew from '../data/players_wc_new.json'
 import wcOld from '../data/players_wc_old.json'
 import euroA from '../data/players_euro_a.json'
@@ -146,6 +147,72 @@ function SlotReel({ finalPair, onDone }) {
         onTransitionEnd={onDone}
       >
         {items.map((item, i) => <ReelItem key={i} pair={item} />)}
+      </div>
+    </div>
+  )
+}
+
+const GROUP_META = [
+  { key: 'GK',  label: 'GK' },
+  { key: 'DEF', label: 'DEF' },
+  { key: 'MID', label: 'MID' },
+  { key: 'ATT', label: 'ATT' },
+]
+
+function LiveBreakdown({ slots, filledCount }) {
+  const groups = useMemo(() => calculateGroupScores(slots), [slots])
+  const overall = useMemo(() => calculateTeamScore(slots), [slots])
+
+  function barCls(v) {
+    if (v == null) return 'bg-gray-700'
+    if (v > 80) return 'bg-green-400'
+    if (v <= 50) return 'bg-red-500'
+    return 'bg-yellow-400'
+  }
+  function textCls(v) {
+    if (v == null) return 'text-gray-600'
+    if (v > 80) return 'text-green-400'
+    if (v <= 50) return 'text-red-500'
+    return 'text-yellow-400'
+  }
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-3">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs uppercase tracking-widest text-gray-500">Live Ratings</p>
+        <span className={`text-xs font-extrabold ${textCls(overall)}`}>{filledCount === 11 ? overall : `${filledCount}/11`}</span>
+      </div>
+      <div className="space-y-1.5">
+        {GROUP_META.map(({ key, label }) => {
+          const val = groups[key]
+          return (
+            <div key={key} className="flex items-center gap-2">
+              <span className="text-[10px] font-bold text-gray-500 w-6 shrink-0">{label}</span>
+              <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${barCls(val)}`}
+                  style={{ width: val != null ? `${val}%` : '0%' }}
+                />
+              </div>
+              <span className={`text-[10px] font-bold w-5 text-right tabular-nums shrink-0 ${textCls(val)}`}>
+                {val ?? '—'}
+              </span>
+            </div>
+          )
+        })}
+        {/* Overall */}
+        <div className="flex items-center gap-2 pt-1 border-t border-gray-700">
+          <span className="text-[10px] font-bold text-gray-400 w-6 shrink-0">OVR</span>
+          <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${barCls(filledCount > 0 ? overall : null)}`}
+              style={{ width: filledCount > 0 ? `${overall}%` : '0%' }}
+            />
+          </div>
+          <span className={`text-[10px] font-bold w-5 text-right tabular-nums shrink-0 ${textCls(filledCount > 0 ? overall : null)}`}>
+            {filledCount > 0 ? overall : '—'}
+          </span>
+        </div>
       </div>
     </div>
   )
@@ -410,6 +477,11 @@ export default function DraftScreen({ config, onComplete }) {
               {skipsLeft > 0 ? `Cancel & skip (${skipsLeft} left)` : 'No skips left'}
             </button>
           </div>
+        )}
+
+        {/* Live team breakdown */}
+        {filledCount > 0 && phase !== 'spinning' && (
+          <LiveBreakdown slots={slots} filledCount={filledCount} />
         )}
       </div>
 
