@@ -1,6 +1,5 @@
-// Paste your Supabase project URL and anon key here
-export const SUPABASE_URL = ''
-export const SUPABASE_ANON_KEY = ''
+export const SUPABASE_URL = 'https://cpjulzgpmyekxlwnfrbv.supabase.co'
+export const SUPABASE_ANON_KEY = 'sb_publishable_rHX4oo8e0KXgVpmmHPsaFQ_kmpoJ2Ml'
 
 export const isConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
 
