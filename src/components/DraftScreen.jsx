@@ -252,10 +252,10 @@ export default function DraftScreen({ config, onComplete }) {
   const placedNames = new Set(slots.filter(s => s.player).map(s => s.player.name))
 
   function doSpin() {
-    if (phase !== 'idle' || spinIndex >= spinQueue.length) return
+    if (phase !== 'idle') return
     if (isHardcore && !assignedSlot) return
     playSpin()
-    const pair = spinQueue[spinIndex]
+    const pair = spinQueue[spinIndex % spinQueue.length]
     setCurrentPair(pair)
     setPhase('spinning')
     setReelKey(k => k + 1)
@@ -303,9 +303,14 @@ export default function DraftScreen({ config, onComplete }) {
     } else {
       playPick()
       setSelectedPlayer(player)
-      setSquad([])
+      // keep squad so the user can go back and pick someone else for free
       setPhase('placing')
     }
+  }
+
+  function backToPicking() {
+    setSelectedPlayer(null)
+    setPhase('picking')
   }
 
   function placePlayer(slotId) {
@@ -316,6 +321,7 @@ export default function DraftScreen({ config, onComplete }) {
     setSlots(nextSlots)
     setSpinIndex(i => i + 1)
     setCurrentPair(null)
+    setSquad([])
     setSelectedPlayer(null)
     setPhase('idle')
   }
@@ -329,6 +335,16 @@ export default function DraftScreen({ config, onComplete }) {
   function skipSpin() {
     if (isHardcore || skipsLeft <= 0) return
     setSkipsLeft(n => n - 1)
+    setSpinIndex(i => i + 1)
+    setCurrentPair(null)
+    setSquad([])
+    setSelectedPlayer(null)
+    setPhase('idle')
+  }
+
+  // Free re-spin when a spun squad has no eligible player — not a voluntary
+  // skip, so it never costs a skip and is always available (prevents soft-lock).
+  function reSpinFree() {
     setSpinIndex(i => i + 1)
     setCurrentPair(null)
     setSquad([])
@@ -431,12 +447,11 @@ export default function DraftScreen({ config, onComplete }) {
 
             {squad.length === 0 && (
               <div className="bg-gray-800 rounded-xl p-4 text-center text-gray-400 text-sm">
-                No eligible players from this squad.
-                {!isHardcore && skipsLeft > 0 && (
-                  <button onClick={skipSpin} className="block mx-auto mt-3 px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs">
-                    Skip ({skipsLeft} left)
-                  </button>
-                )}
+                No eligible players from this squad for your remaining {isHardcore ? 'position' : 'slots'}.
+                <button onClick={reSpinFree} className="block mx-auto mt-3 px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold text-xs">
+                  Spin again (free) ⚽
+                </button>
+                <p className="text-gray-600 text-[10px] mt-2">Free re-spin — doesn't use a skip</p>
               </div>
             )}
 
@@ -482,11 +497,10 @@ export default function DraftScreen({ config, onComplete }) {
               )}
             </div>
             <button
-              onClick={skipSpin}
-              disabled={skipsLeft <= 0}
-              className="w-full py-2 rounded-xl border border-gray-700 hover:border-gray-500 disabled:opacity-30 disabled:cursor-not-allowed text-gray-400 hover:text-white text-sm transition-colors"
+              onClick={backToPicking}
+              className="w-full py-2 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm transition-colors"
             >
-              {skipsLeft > 0 ? `Cancel & skip (${skipsLeft} left)` : 'No skips left'}
+              ← Back to players
             </button>
           </div>
         )}
