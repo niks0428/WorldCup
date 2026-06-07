@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { seededShuffle } from '../lib/seededRandom'
 import wcNew from '../data/players_wc_new.json'
 import wcOld from '../data/players_wc_old.json'
 import euroA from '../data/players_euro_a.json'
@@ -153,7 +154,9 @@ export default function DraftScreen({ config, onComplete }) {
   const initialSlots = formationDef.slots.map(s => ({ ...s, player: null }))
 
   const [slots, setSlots] = useState(initialSlots)
-  const [spinQueue] = useState(() => shuffle(ALL_PAIRS))
+  const [spinQueue] = useState(() =>
+    config.seed ? seededShuffle(ALL_PAIRS, config.seed) : shuffle(ALL_PAIRS)
+  )
   const [spinIndex, setSpinIndex] = useState(0)
   // phases: idle | spinning | picking | placing
   const [phase, setPhase] = useState('idle')

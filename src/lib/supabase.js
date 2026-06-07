@@ -12,27 +12,47 @@ function headers() {
   }
 }
 
-export async function submitScore({ playerName, score, tier, formation, mode, squadUrl }) {
+export async function submitScore({ playerName, score, tier, formation, mode, squadUrl, seed, challengeDate }) {
+  const body = {
+    player_name: playerName,
+    score,
+    tier,
+    formation,
+    mode,
+    squad_url: squadUrl,
+  }
+  if (seed) body.seed = seed
+  if (challengeDate) body.challenge_date = challengeDate
+
   const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
     method: 'POST',
     headers: headers(),
-    body: JSON.stringify({
-      player_name: playerName,
-      score,
-      tier,
-      formation,
-      mode,
-      squad_url: squadUrl,
-    }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Submit failed: ${res.status}`)
 }
 
-export async function fetchScores(limit = 50) {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/scores?select=*&order=score.desc,created_at.asc&limit=${limit}`,
-    { headers: headers() }
-  )
+export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', seed } = {}) {
+  const params = new URLSearchParams()
+  params.set('select', '*')
+  params.set('order', 'score.desc,created_at.asc')
+  params.set('limit', '50')
+
+  if (seed) {
+    params.set('seed', `eq.${seed}`)
+  } else {
+    if (modeFilter !== 'all') params.set('mode', `eq.${modeFilter}`)
+    if (timeFilter === 'week') {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      params.set('created_at', `gte.${weekAgo}`)
+    } else if (timeFilter === 'daily') {
+      const today = new Date().toISOString().split('T')[0]
+      params.set('challenge_date', `eq.${today}`)
+      params.set('mode', 'eq.daily')
+    }
+  }
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?${params}`, { headers: headers() })
   if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
   return res.json()
 }

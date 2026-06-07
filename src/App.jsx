@@ -8,15 +8,14 @@ import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
 import euroA from './data/players_euro_a.json'
 import euroB from './data/players_euro_b.json'
+import { randomSeed } from './lib/seededRandom'
 import './index.css'
 
 const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
 
 function buildPlayerLookup() {
   const map = {}
-  for (const p of allPlayers) {
-    map[`${p.name}|${p.nation}|${p.year}|${p.tournament}`] = p
-  }
+  for (const p of allPlayers) map[`${p.name}|${p.nation}|${p.year}|${p.tournament}`] = p
   return map
 }
 
@@ -33,22 +32,43 @@ function squadFromHash(hash) {
   return { slots, formation: data.f, mode: data.m }
 }
 
+function challengeFromHash(hash) {
+  if (!hash.startsWith('#c=')) return null
+  const payload = hash.slice(3)
+  const pipe = payload.lastIndexOf('|')
+  if (pipe === -1) return null
+  const formation = payload.slice(0, pipe)
+  const seed = payload.slice(pipe + 1)
+  if (!formations[formation] || !seed) return null
+  return { formation, seed, mode: 'classic', isChallenge: true }
+}
+
 export default function App() {
   const [screen, setScreen] = useState('setup')
   const [config, setConfig] = useState(null)
   const [finalSlots, setFinalSlots] = useState(null)
+  const [leaderboardSeed, setLeaderboardSeed] = useState(null)
 
   useEffect(() => {
-    const shared = squadFromHash(window.location.hash)
+    const hash = window.location.hash
+    const shared = squadFromHash(hash)
     if (shared) {
       setFinalSlots(shared.slots)
       setConfig({ formation: shared.formation, mode: shared.mode })
       setScreen('result')
+      return
+    }
+    const challenge = challengeFromHash(hash)
+    if (challenge) {
+      setConfig(challenge)
+      setScreen('draft')
     }
   }, [])
 
   function handleSetupDone(cfg) {
-    setConfig(cfg)
+    // Attach a random seed to every game so challenge links always work
+    const seed = cfg.seed || randomSeed()
+    setConfig({ ...cfg, seed })
     setScreen('draft')
   }
 
@@ -60,14 +80,20 @@ export default function App() {
   function handleRestart() {
     setConfig(null)
     setFinalSlots(null)
+    setLeaderboardSeed(null)
     window.location.hash = ''
     setScreen('setup')
+  }
+
+  function handleLeaderboard(seed) {
+    setLeaderboardSeed(seed || null)
+    setScreen('leaderboard')
   }
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       {screen === 'setup' && (
-        <SetupScreen onStart={handleSetupDone} onLeaderboard={() => setScreen('leaderboard')} />
+        <SetupScreen onStart={handleSetupDone} onLeaderboard={() => handleLeaderboard(null)} />
       )}
       {screen === 'draft' && (
         <DraftScreen config={config} onComplete={handleDraftDone} />
@@ -77,12 +103,16 @@ export default function App() {
           slots={finalSlots}
           formation={config?.formation}
           mode={config?.mode}
+          seed={config?.seed}
           onRestart={handleRestart}
-          onLeaderboard={() => setScreen('leaderboard')}
+          onLeaderboard={() => handleLeaderboard(config?.seed)}
         />
       )}
       {screen === 'leaderboard' && (
-        <LeaderboardScreen onBack={() => setScreen(finalSlots ? 'result' : 'setup')} />
+        <LeaderboardScreen
+          onBack={() => setScreen(finalSlots ? 'result' : 'setup')}
+          challengeSeed={leaderboardSeed}
+        />
       )}
     </div>
   )
