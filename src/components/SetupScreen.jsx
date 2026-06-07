@@ -112,28 +112,21 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
           {mode === 'hardcore' ? '💀 Start Hardcore' : 'Start Drafting →'}
         </button>
 
-        {/* Nav buttons */}
+        {/* Nav buttons — always 2-column grid */}
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={onHistory} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">
-            📋 History
-          </button>
-          <button onClick={onHowItWorks} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">
-            ℹ️ How to Score
-          </button>
-          <button onClick={onAchievements} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors col-span-2">
-            🏆 Achievements
-          </button>
-          {isConfigured && (
-            <button onClick={onGroup} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">
-              {currentGroup ? `👥 ${currentGroup.name}` : '👥 Groups'}
-            </button>
-          )}
-          {isConfigured && (
-            <button onClick={onLeaderboard} className={`py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors ${!currentGroup ? 'col-span-2' : ''}`}>
-              🏅 Leaderboard
-            </button>
-          )}
+          <button onClick={onHistory}      className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">📋 History</button>
+          <button onClick={onHowItWorks}   className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">ℹ️ How to Score</button>
+          <button onClick={onAchievements} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">🏆 Achievements</button>
+          {isConfigured
+            ? <button onClick={onGroup} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">{currentGroup ? `👥 ${currentGroup.name}` : '👥 Groups'}</button>
+            : <div />
+          }
         </div>
+        {isConfigured && (
+          <button onClick={onLeaderboard} className="w-full py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">
+            🏅 Leaderboard
+          </button>
+        )}
       </div>
 
       <div className="mt-8 text-center space-y-2">
