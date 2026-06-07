@@ -2,8 +2,24 @@ import { useState } from 'react'
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3', '4-5-1']
 const MODES = [
-  { id: 'classic', label: 'Classic', desc: 'Full squad available — more choice, easier to fill slots.' },
-  { id: 'expert',  label: 'Expert',  desc: 'Named XI only — harder, purer, more World Cup nostalgia.' },
+  {
+    id: 'classic',
+    label: 'Classic',
+    badge: null,
+    desc: 'Full squad shown. Pick your player, then choose which slot to fill. 3 skips.',
+  },
+  {
+    id: 'expert',
+    label: 'Expert',
+    badge: null,
+    desc: 'Position-compatible players only. Pick player, choose slot. 3 skips.',
+  },
+  {
+    id: 'hardcore',
+    label: 'Hardcore',
+    badge: '💀',
+    desc: 'The game picks your position randomly. Must choose a player. No skips.',
+  },
 ]
 
 export default function SetupScreen({ onStart }) {
@@ -18,25 +34,30 @@ export default function SetupScreen({ onStart }) {
           Lift the Trophy
         </h1>
         <p className="text-gray-400 text-lg max-w-md mx-auto">
-          Spin real World Cup squads, draft your ultimate XI, and find out if your team could go all the way.
+          Spin real World Cup &amp; Euro squads, draft your ultimate XI, and find out if your team could go all the way.
         </p>
       </div>
 
       <div className="w-full max-w-md space-y-8">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-3">Mode</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col gap-3">
             {MODES.map(m => (
               <button
                 key={m.id}
                 onClick={() => setMode(m.id)}
                 className={`rounded-xl border-2 p-4 text-left transition-all ${
                   mode === m.id
-                    ? 'border-yellow-400 bg-yellow-400/10 text-white'
+                    ? m.id === 'hardcore'
+                      ? 'border-red-500 bg-red-500/10 text-white'
+                      : 'border-yellow-400 bg-yellow-400/10 text-white'
                     : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
                 }`}
               >
-                <div className="font-bold text-base mb-1">{m.label}</div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-bold text-base">{m.label}</span>
+                  {m.badge && <span>{m.badge}</span>}
+                </div>
                 <div className="text-xs leading-snug">{m.desc}</div>
               </button>
             ))}
@@ -64,9 +85,13 @@ export default function SetupScreen({ onStart }) {
 
         <button
           onClick={() => onStart({ mode, formation })}
-          className="w-full py-4 rounded-2xl bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-extrabold text-lg transition-colors shadow-lg shadow-yellow-400/20"
+          className={`w-full py-4 rounded-2xl font-extrabold text-lg transition-colors shadow-lg ${
+            mode === 'hardcore'
+              ? 'bg-red-500 hover:bg-red-400 text-white shadow-red-500/20'
+              : 'bg-yellow-400 hover:bg-yellow-300 text-gray-900 shadow-yellow-400/20'
+          }`}
         >
-          Start Drafting →
+          {mode === 'hardcore' ? '💀 Start Hardcore' : 'Start Drafting →'}
         </button>
       </div>
     </div>

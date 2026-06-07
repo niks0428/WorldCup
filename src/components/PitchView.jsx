@@ -1,6 +1,6 @@
 import { FLAG_MAP } from './DraftScreen'
 
-export default function PitchView({ slots, phase, compatibleSlotIds = [], onPlacePlayer }) {
+export default function PitchView({ slots, phase, compatibleSlotIds = [], assignedSlotId, onPlacePlayer }) {
   return (
     <div
       className="relative w-full rounded-2xl overflow-hidden"
@@ -26,6 +26,7 @@ export default function PitchView({ slots, phase, compatibleSlotIds = [], onPlac
           slot={slot}
           phase={phase}
           compatible={compatibleSlotIds.includes(slot.id)}
+          assigned={assignedSlotId === slot.id}
           onPlace={onPlacePlayer}
         />
       ))}
@@ -33,7 +34,7 @@ export default function PitchView({ slots, phase, compatibleSlotIds = [], onPlac
   )
 }
 
-function PlayerCard({ slot, phase, compatible, onPlace }) {
+function PlayerCard({ slot, phase, compatible, assigned, onPlace }) {
   const left = `${slot.x}%`
   const top = `${slot.y}%`
   const isPlacing = phase === 'placing'
@@ -53,18 +54,27 @@ function PlayerCard({ slot, phase, compatible, onPlace }) {
           className={`rounded-full border-2 flex items-center justify-center transition-all duration-150 ${
             clickable
               ? 'w-12 h-12 border-yellow-400 bg-yellow-400/25 shadow-lg shadow-yellow-400/50 scale-110 animate-pulse'
-              : dimmed
-                ? 'w-10 h-10 border-dashed border-white/15 bg-black/10 opacity-40'
-                : 'w-10 h-10 border-dashed border-white/40 bg-black/20'
+              : assigned
+                ? 'w-12 h-12 border-red-500 bg-red-500/20 shadow-lg shadow-red-500/40 scale-110'
+                : dimmed
+                  ? 'w-10 h-10 border-dashed border-white/15 bg-black/10 opacity-40'
+                  : 'w-10 h-10 border-dashed border-white/40 bg-black/20'
           }`}
         >
-          <span className={`text-[10px] font-extrabold tracking-tight ${clickable ? 'text-yellow-400' : 'text-white/50'}`}>
+          <span className={`text-[10px] font-extrabold tracking-tight ${
+            clickable ? 'text-yellow-400' : assigned ? 'text-red-400' : 'text-white/50'
+          }`}>
             {slot.position}
           </span>
         </div>
         {clickable && (
           <div className="bg-yellow-400 rounded px-1.5 py-0.5 shadow-md">
             <span className="text-gray-900 text-[8px] font-extrabold uppercase tracking-wider">Place here</span>
+          </div>
+        )}
+        {assigned && !clickable && (
+          <div className="bg-red-500 rounded px-1.5 py-0.5 shadow-md">
+            <span className="text-white text-[8px] font-extrabold uppercase tracking-wider">Next</span>
           </div>
         )}
       </button>
