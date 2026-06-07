@@ -78,16 +78,16 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
     })
   }
 
-  // Auto-submit to group if player has a saved name
   useEffect(() => {
     const t = setTimeout(() => fireConfetti(score), 400)
     return () => clearTimeout(t)
   }, [])
 
+  // Auto-submit to global (+ group) whenever a saved name exists
   useEffect(() => {
-    if (!inGroup || !isConfigured || autoSubmitted) return
+    if (!isConfigured || autoSubmitted) return
     const savedName = getSavedName()
-    if (!savedName) return // no name yet — wait for manual submit
+    if (!savedName) return // first time — wait for manual entry
     setSubmitState('submitting')
     doSubmit(savedName)
       .then(() => { setSubmitState('done'); setAutoSubmitted(true) })
@@ -230,14 +230,23 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
         <div className="space-y-3">
           {/* Submit panel */}
           {isConfigured && submitState === 'submitting' && (
-            <div className="bg-gray-800 rounded-xl p-3 text-center text-gray-400 text-sm">Submitting…</div>
+            <div className="bg-gray-800 rounded-xl p-3 text-center text-gray-400 text-sm animate-pulse">
+              Submitting to leaderboard…
+            </div>
           )}
 
           {isConfigured && submitState !== 'done' && submitState !== 'submitting' && (
-            <div className="bg-gray-800 rounded-xl p-3 space-y-2">
-              <p className="text-xs uppercase tracking-widest text-gray-500">
-                {inGroup ? '👥 Auto-submits to your group' : isDaily ? '⭐ Submit daily score' : 'Submit to leaderboard'}
-              </p>
+            <div className={`rounded-xl p-3 space-y-2 ${getSavedName() ? 'bg-gray-800' : 'bg-yellow-400/10 border border-yellow-400/30'}`}>
+              {!getSavedName() ? (
+                <>
+                  <p className="text-yellow-400 font-bold text-sm">🏅 Set your leaderboard name</p>
+                  <p className="text-gray-400 text-xs">Enter once — every future game posts automatically to the global leaderboard{inGroup ? ' and your group' : ''}.</p>
+                </>
+              ) : (
+                <p className="text-xs uppercase tracking-widest text-gray-500">
+                  {inGroup ? '👥 Update name or resubmit' : 'Update name or resubmit'}
+                </p>
+              )}
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -246,19 +255,17 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
                   value={name}
                   onChange={e => setName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                  autoFocus={!getSavedName()}
                   className="flex-1 bg-gray-700 text-white rounded-lg px-3 py-2 text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-yellow-400"
                 />
                 <button
                   onClick={handleSubmit}
-                  disabled={!name.trim() || submitState === 'submitting'}
+                  disabled={!name.trim()}
                   className="px-4 py-2 rounded-lg bg-yellow-400 hover:bg-yellow-300 disabled:opacity-40 text-gray-900 font-bold text-sm transition-colors shrink-0"
                 >
-                  {submitState === 'error' ? 'Retry' : 'Submit'}
+                  {submitState === 'error' ? 'Retry' : getSavedName() ? 'Update' : 'Save'}
                 </button>
               </div>
-              {inGroup && getSavedName() && (
-                <p className="text-gray-500 text-xs">Submitting as <span className="text-gray-300">{getSavedName()}</span> · change name above to update</p>
-              )}
               {submitState === 'error' && <p className="text-red-400 text-xs">Failed — check your connection.</p>}
             </div>
           )}
@@ -266,8 +273,9 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
           {isConfigured && submitState === 'done' && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-center">
               <div className="text-green-400 font-bold text-sm">
-                {inGroup && autoSubmitted ? `✓ Auto-submitted to group!` : '✓ Score submitted!'}
+                ✓ On the leaderboard{inGroup ? ' & group' : ''}!
               </div>
+              <div className="text-green-400/60 text-xs mt-0.5">as {getSavedName()}</div>
               <button onClick={onLeaderboard} className="text-xs text-green-400/70 hover:text-green-400 mt-1 transition-colors">
                 View leaderboard →
               </button>
