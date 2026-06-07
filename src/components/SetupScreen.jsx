@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { isConfigured } from '../lib/supabase'
 import { todaySeed } from '../lib/seededRandom'
+import Logo from './Logo'
 
 const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3', '4-5-1']
 const MODES = [
@@ -18,11 +19,14 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-12">
       <div className="text-center mb-8">
-        <div className="text-6xl mb-4">🏆</div>
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-3">
-          Lift the Trophy
+        <div className="flex justify-center mb-3">
+          <Logo size={110} />
+        </div>
+        <h1 className="text-white mb-1 leading-none">
+          <span className="block text-2xl font-light tracking-[0.25em] text-yellow-400/80 uppercase">Lift the</span>
+          <span className="block text-5xl md:text-6xl font-extrabold tracking-tight">Trophy</span>
         </h1>
-        <p className="text-gray-400 text-lg max-w-md mx-auto">
+        <p className="text-gray-500 text-sm max-w-xs mx-auto mt-3">
           Spin real World Cup &amp; Euro squads, draft your ultimate XI, and find out how far you'd go.
         </p>
       </div>
