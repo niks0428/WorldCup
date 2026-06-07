@@ -8,6 +8,7 @@ import HistoryScreen from './components/HistoryScreen'
 import GroupScreen, { getSavedGroup } from './components/GroupScreen'
 import RevealScreen from './components/RevealScreen'
 import HowItWorksScreen from './components/HowItWorksScreen'
+import AchievementsScreen from './components/AchievementsScreen'
 import formations from './data/formations.json'
 import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
@@ -17,6 +18,7 @@ import { randomSeed } from './lib/seededRandom'
 import { getStreak, updateStreak } from './lib/streak'
 import { saveToHistory } from './lib/history'
 import { calculateTeamScore, getTier } from './utils/scoring'
+import { getAchievements, saveAchievements } from './lib/achievements'
 import './index.css'
 
 const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
@@ -92,10 +94,16 @@ export default function App() {
     saveToHistory({ slots, formation: config.formation, mode: config.mode, score, tier: tier.label, seed: config.seed })
 
     // Update streak for daily
+    let updatedStreak = streak
     if (config?.mode === 'daily') {
-      const updated = updateStreak()
-      setStreak(updated)
+      updatedStreak = updateStreak()
+      setStreak(updatedStreak)
     }
+
+    // Save achievements
+    const achievementConfig = { ...config, skipsUsed: skips, streak: updatedStreak.streak }
+    const earned = getAchievements(slots, achievementConfig)
+    saveAchievements(earned)
 
     // Hardcore gets reveal screen first
     if (isHardcore) {
@@ -145,6 +153,7 @@ export default function App() {
           onHistory={() => setScreen('history')}
           onGroup={() => setScreen('group')}
           onHowItWorks={() => setScreen('howto')}
+          onAchievements={() => setScreen('achievements')}
           streak={streak}
           currentGroup={currentGroup}
         />
@@ -180,6 +189,7 @@ export default function App() {
         <HistoryScreen onBack={() => setScreen('setup')} onViewSquad={handleViewSquad} />
       )}
       {screen === 'howto' && <HowItWorksScreen onBack={() => setScreen('setup')} />}
+      {screen === 'achievements' && <AchievementsScreen onBack={() => setScreen('setup')} />}
       {screen === 'group' && (
         <GroupScreen
           onBack={() => setScreen('setup')}

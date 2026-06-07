@@ -10,7 +10,7 @@ const MODES = [
   { id: 'hardcore', label: 'Hardcore', badge: '💀', desc: 'Random position assigned. No stats, no skips. Stats revealed at the end.' },
 ]
 
-export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, streak, currentGroup }) {
+export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, streak, currentGroup }) {
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
 
@@ -119,6 +119,9 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
           </button>
           <button onClick={onHowItWorks} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">
             ℹ️ How to Score
+          </button>
+          <button onClick={onAchievements} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors col-span-2">
+            🏆 Achievements
           </button>
           {isConfigured && (
             <button onClick={onGroup} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">
