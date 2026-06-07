@@ -1,6 +1,6 @@
 import { FLAG_MAP } from './DraftScreen'
 
-export default function PitchView({ slots }) {
+export default function PitchView({ slots, phase, compatibleSlotIds = [], onPlacePlayer }) {
   return (
     <div
       className="relative w-full rounded-2xl overflow-hidden"
@@ -21,26 +21,53 @@ export default function PitchView({ slots }) {
       </svg>
 
       {slots.map(slot => (
-        <PlayerCard key={slot.id} slot={slot} />
+        <PlayerCard
+          key={slot.id}
+          slot={slot}
+          phase={phase}
+          compatible={compatibleSlotIds.includes(slot.id)}
+          onPlace={onPlacePlayer}
+        />
       ))}
     </div>
   )
 }
 
-function PlayerCard({ slot }) {
+function PlayerCard({ slot, phase, compatible, onPlace }) {
   const left = `${slot.x}%`
   const top = `${slot.y}%`
+  const isPlacing = phase === 'placing'
 
   if (!slot.player) {
+    const clickable = isPlacing && compatible
+    const dimmed = isPlacing && !compatible
+
     return (
-      <div
-        className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
-        style={{ left, top }}
+      <button
+        onClick={() => clickable && onPlace?.(slot.id)}
+        disabled={!clickable}
+        className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 transition-all duration-150"
+        style={{ left, top, cursor: clickable ? 'pointer' : 'default' }}
       >
-        <div className="w-10 h-10 rounded-full border-2 border-dashed border-white/30 flex items-center justify-center bg-black/20">
-          <span className="text-white/40 text-xs font-bold">{slot.position}</span>
+        <div
+          className={`rounded-full border-2 flex items-center justify-center transition-all duration-150 ${
+            clickable
+              ? 'w-12 h-12 border-yellow-400 bg-yellow-400/25 shadow-lg shadow-yellow-400/50 scale-110 animate-pulse'
+              : dimmed
+                ? 'w-10 h-10 border-dashed border-white/15 bg-black/10 opacity-40'
+                : 'w-10 h-10 border-dashed border-white/40 bg-black/20'
+          }`}
+        >
+          <span className={`text-[10px] font-extrabold tracking-tight ${clickable ? 'text-yellow-400' : 'text-white/50'}`}>
+            {slot.position}
+          </span>
         </div>
-      </div>
+        {clickable && (
+          <div className="bg-yellow-400 rounded px-1.5 py-0.5 shadow-md">
+            <span className="text-gray-900 text-[8px] font-extrabold uppercase tracking-wider">Place here</span>
+          </div>
+        )}
+      </button>
     )
   }
 
