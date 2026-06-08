@@ -144,7 +144,7 @@ export function simulateLeague(slots, score, seedInput) {
 
   // Distribute match goals across the XI for awards. Runs after all
   // tier/table RNG so it never changes any existing result or standing.
-  const { goldenBoot, playerOfSeason } = awardStats(slots, matches, rng)
+  const { goldenBoot, playerOfSeason } = awardStats(slots, matches, rng, name => CLUB_PLAYERS[name] ?? [])
 
   return {
     tier,
@@ -188,25 +188,75 @@ function pickWeighted(weights, rng, exclude = -1) {
   return weights.findIndex((_, i) => i !== exclude)
 }
 
-export function awardStats(slots, matches, rng) {
+// Known star players per club (2 per side). Goals from each match are
+// distributed to these players so the Golden Boot / Player of the Season
+// can be won by an opponent — not just your own XI.
+const CLUB_PLAYERS = {
+  'Liverpool':          [{ name: 'M. Salah',          pos: 'RW'  }, { name: 'D. Núñez',        pos: 'ST'  }],
+  'Arsenal':            [{ name: 'B. Saka',            pos: 'RW'  }, { name: 'K. Havertz',      pos: 'ST'  }],
+  'Manchester City':    [{ name: 'E. Haaland',         pos: 'ST'  }, { name: 'K. De Bruyne',    pos: 'CAM' }],
+  'Chelsea':            [{ name: 'C. Palmer',          pos: 'CAM' }, { name: 'N. Jackson',      pos: 'ST'  }],
+  'Newcastle United':   [{ name: 'A. Isak',            pos: 'ST'  }, { name: 'J. Gordon',       pos: 'LW'  }],
+  'Aston Villa':        [{ name: 'O. Watkins',         pos: 'ST'  }, { name: 'M. Buendía',      pos: 'CAM' }],
+  'Tottenham Hotspur':  [{ name: 'H. Son',             pos: 'LW'  }, { name: 'D. Solanke',      pos: 'ST'  }],
+  'Manchester United':  [{ name: 'R. Højlund',         pos: 'ST'  }, { name: 'B. Fernandes',    pos: 'CAM' }],
+  'Brighton':           [{ name: 'J. Pedro',           pos: 'ST'  }, { name: 'S. Mitoma',       pos: 'LW'  }],
+  'Bournemouth':        [{ name: 'E. Christie',        pos: 'ST'  }, { name: 'D. Semenyo',      pos: 'RW'  }],
+  'Crystal Palace':     [{ name: 'J. Mateta',          pos: 'ST'  }, { name: 'E. Eze',          pos: 'CAM' }],
+  'Brentford':          [{ name: 'B. Mbeumo',          pos: 'RW'  }, { name: 'Y. Wissa',        pos: 'ST'  }],
+  'Fulham':             [{ name: 'R. Jiménez',         pos: 'ST'  }, { name: 'A. Pereira',      pos: 'CAM' }],
+  'Everton':            [{ name: 'D. Calvert-Lewin',   pos: 'ST'  }, { name: 'B. McNeil',       pos: 'RW'  }],
+  'Wolves':             [{ name: 'M. Cunha',           pos: 'CAM' }, { name: 'J. Strand Larsen',pos: 'ST'  }],
+  'Nottingham Forest':  [{ name: 'C. Wood',            pos: 'ST'  }, { name: 'M. Gibbs-White',  pos: 'CAM' }],
+  'West Ham United':    [{ name: 'M. Antonio',         pos: 'ST'  }, { name: 'J. Ward-Prowse',  pos: 'CAM' }],
+  'Leeds United':       [{ name: 'P. Bamford',         pos: 'ST'  }, { name: 'C. Gnonto',       pos: 'LW'  }],
+  'Sunderland':         [{ name: 'R. Stewart',         pos: 'CAM' }, { name: 'E. Embleton',     pos: 'CM'  }],
+}
+
+export function awardStats(slots, matches, rng, getOpponentPlayers) {
   const filled = slots.filter(s => s.player)
   if (!filled.length) return { goldenBoot: null, playerOfSeason: null, playerOfTournament: null }
   const gw = filled.map(s => GOAL_W[s.position] ?? 3)
   const aw = filled.map(s => ASSIST_W[s.position] ?? 4)
   const pg = new Array(filled.length).fill(0)
   const pa = new Array(filled.length).fill(0)
+  // Opponent goal totals accumulated across all matches, keyed by `name|team`
+  const oppAcc = new Map()
   for (const m of matches) {
+    // Your team's goals
     for (let g = 0; g < m.gf; g++) {
       const si = pickWeighted(gw, rng)
       pg[si]++
       if (rng() < 0.78 && filled.length > 1) pa[pickWeighted(aw, rng, si)]++
     }
+    // Opponent goals distributed to their known players
+    if (m.ga > 0 && getOpponentPlayers) {
+      const ops = getOpponentPlayers(m.opponent) || []
+      if (ops.length) {
+        const ow = ops.map(p => GOAL_W[p.pos] ?? 10)
+        for (let g = 0; g < m.ga; g++) {
+          const oi = pickWeighted(ow, rng)
+          const op = ops[oi]
+          const key = `${op.name}|${m.opponent}`
+          if (!oppAcc.has(key)) oppAcc.set(key, { name: op.name, position: op.pos, team: m.opponent, goals: 0, assists: 0 })
+          oppAcc.get(key).goals++
+          if (rng() < 0.78 && ops.length > 1) {
+            const ap = ops[pickWeighted(ow, rng, oi)]
+            const akey = `${ap.name}|${m.opponent}`
+            if (!oppAcc.has(akey)) oppAcc.set(akey, { name: ap.name, position: ap.pos, team: m.opponent, goals: 0, assists: 0 })
+            oppAcc.get(akey).assists++
+          }
+        }
+      }
+    }
   }
-  const stats = filled.map((s, i) => ({
-    name: s.player.name, position: s.position,
+  const yourStats = filled.map((s, i) => ({
+    name: s.player.name, position: s.position, team: null,
     goals: pg[i], assists: pa[i], contributions: pg[i] + pa[i],
   }))
-  const goldenBoot     = stats.reduce((b, p) => p.goals         > b.goals         ? p : b, stats[0])
-  const playerOfSeason = stats.reduce((b, p) => p.contributions > b.contributions ? p : b, stats[0])
+  const oppStats = [...oppAcc.values()].map(o => ({ ...o, contributions: o.goals + o.assists }))
+  const allStats = [...yourStats, ...oppStats]
+  const goldenBoot     = allStats.reduce((b, p) => p.goals         > b.goals         ? p : b, allStats[0])
+  const playerOfSeason = allStats.reduce((b, p) => p.contributions > b.contributions ? p : b, allStats[0])
   return { goldenBoot, playerOfSeason, playerOfTournament: playerOfSeason }
 }

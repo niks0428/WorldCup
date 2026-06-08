@@ -34,6 +34,44 @@ const ELITE_OPP = [
   'Netherlands', 'Portugal', 'England', 'Belgium', 'Uruguay', 'Croatia',
 ]
 
+// Two representative players per nation so opponent goals can be attributed
+// to a real player for the Golden Boot / Player of the Tournament.
+const WC_NATION_PLAYERS = {
+  // Group-stage opponents
+  'Australia':    [{ name: 'M. Leckie',      pos: 'RW'  }, { name: 'A. Hrustic',    pos: 'CM'  }],
+  'Japan':        [{ name: 'A. Mitoma',      pos: 'LW'  }, { name: 'D. Ito',        pos: 'RW'  }],
+  'South Korea':  [{ name: 'H. Son',         pos: 'LW'  }, { name: 'H. Hwang',      pos: 'ST'  }],
+  'USA':          [{ name: 'C. Pulisic',     pos: 'LW'  }, { name: 'F. Weah',       pos: 'RW'  }],
+  'Mexico':       [{ name: 'H. Lozano',      pos: 'RW'  }, { name: 'R. Jiménez',    pos: 'ST'  }],
+  'Iceland':      [{ name: 'A. Sigurdsson',  pos: 'ST'  }, { name: 'G. Sigurdsson', pos: 'CAM' }],
+  'Senegal':      [{ name: 'S. Mané',        pos: 'LW'  }, { name: 'I. Sarr',       pos: 'RW'  }],
+  'Ghana':        [{ name: 'J. Ayew',        pos: 'ST'  }, { name: 'T. Partey',     pos: 'CDM' }],
+  'Cameroon':     [{ name: 'V. Aboubakar',   pos: 'ST'  }, { name: 'B. Hongla',     pos: 'CM'  }],
+  'Morocco':      [{ name: 'H. Ziyech',      pos: 'CAM' }, { name: 'Y. En-Nesyri',  pos: 'ST'  }],
+  'Poland':       [{ name: 'R. Lewandowski', pos: 'ST'  }, { name: 'P. Zielinski',  pos: 'CAM' }],
+  'Sweden':       [{ name: 'A. Isak',        pos: 'ST'  }, { name: 'D. Kulusevski', pos: 'RW'  }],
+  'Switzerland':  [{ name: 'G. Xhaka',       pos: 'CM'  }, { name: 'B. Embolo',     pos: 'ST'  }],
+  'Denmark':      [{ name: 'C. Eriksen',     pos: 'CAM' }, { name: 'M. Damsgaard',  pos: 'LW'  }],
+  'Austria':      [{ name: 'M. Sabitzer',    pos: 'CM'  }, { name: 'C. Gregoritsch',pos: 'ST'  }],
+  'Serbia':       [{ name: 'A. Mitrovic',    pos: 'ST'  }, { name: 'D. Tadic',      pos: 'CAM' }],
+  'Chile':        [{ name: 'A. Sanchez',     pos: 'LW'  }, { name: 'B. Diaz',       pos: 'ST'  }],
+  'Algeria':      [{ name: 'R. Mahrez',      pos: 'RW'  }, { name: 'Y. Benrahma',   pos: 'LW'  }],
+  'Ukraine':      [{ name: 'A. Yarmolenko',  pos: 'RW'  }, { name: 'R. Yaremchuk',  pos: 'ST'  }],
+  // Elite (knockout) opponents
+  'Brazil':       [{ name: 'V. Jr.',         pos: 'LW'  }, { name: 'R. Firmino',    pos: 'ST'  }],
+  'Argentina':    [{ name: 'J. Alvarez',     pos: 'ST'  }, { name: 'A. Mac Allister',pos: 'CM' }],
+  'France':       [{ name: 'K. Mbappe',      pos: 'ST'  }, { name: 'A. Griezmann',  pos: 'CAM' }],
+  'Germany':      [{ name: 'K. Havertz',     pos: 'ST'  }, { name: 'J. Musiala',    pos: 'CAM' }],
+  'Spain':        [{ name: 'A. Yamal',       pos: 'RW'  }, { name: 'A. Morata',     pos: 'ST'  }],
+  'Italy':        [{ name: 'G. Scamacca',    pos: 'ST'  }, { name: 'F. Chiesa',     pos: 'RW'  }],
+  'Netherlands':  [{ name: 'C. Gakpo',       pos: 'LW'  }, { name: 'M. Depay',      pos: 'ST'  }],
+  'Portugal':     [{ name: 'C. Ronaldo',     pos: 'ST'  }, { name: 'B. Silva',      pos: 'CAM' }],
+  'England':      [{ name: 'H. Kane',        pos: 'ST'  }, { name: 'B. Saka',       pos: 'RW'  }],
+  'Belgium':      [{ name: 'R. Lukaku',      pos: 'ST'  }, { name: 'K. De Bruyne',  pos: 'CAM' }],
+  'Uruguay':      [{ name: 'D. Nunez',       pos: 'ST'  }, { name: 'F. Valverde',   pos: 'CM'  }],
+  'Croatia':      [{ name: 'I. Perisic',     pos: 'LW'  }, { name: 'A. Kramanic',   pos: 'ST'  }],
+}
+
 function shuffle(arr, rng) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -113,6 +151,6 @@ export function simulateTournament(slots, score, seedInput) {
     }
   }
 
-  const { goldenBoot, playerOfTournament } = awardStats(slots, matches, rng)
+  const { goldenBoot, playerOfTournament } = awardStats(slots, matches, rng, name => WC_NATION_PLAYERS[name] ?? [])
   return { tier: tierLabel, tierMeta: TIER_META[tierLabel], matches, goalsFor, goalsAgainst, goldenBoot, playerOfTournament }
 }
