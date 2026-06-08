@@ -7,6 +7,7 @@ import PrivacyScreen from './components/PrivacyScreen'
 import HistoryScreen from './components/HistoryScreen'
 import GroupScreen, { getSavedGroup } from './components/GroupScreen'
 import RevealScreen from './components/RevealScreen'
+import RunRevealScreen from './components/RunRevealScreen'
 import HowItWorksScreen from './components/HowItWorksScreen'
 import AchievementsScreen from './components/AchievementsScreen'
 import formations from './data/formations.json'
@@ -107,11 +108,11 @@ export default function App() {
     const earned = getAchievements(slots, achievementConfig)
     saveAchievements(earned)
 
-    // Hardcore gets reveal screen first
+    // Hardcore reveals the squad first, then everyone watches the tournament run.
     if (isHardcore) {
       setScreen('reveal')
     } else {
-      setScreen('result')
+      setScreen('run')
     }
   }
 
@@ -164,7 +165,10 @@ export default function App() {
         <DraftScreen config={config} onComplete={handleDraftDone} />
       )}
       {screen === 'reveal' && (
-        <RevealScreen slots={finalSlots} onDone={() => setScreen('result')} />
+        <RevealScreen slots={finalSlots} onDone={() => setScreen('run')} />
+      )}
+      {screen === 'run' && (
+        <RunRevealScreen slots={finalSlots} seed={config?.seed} onDone={() => setScreen('result')} />
       )}
       {screen === 'result' && (
         <ResultScreen

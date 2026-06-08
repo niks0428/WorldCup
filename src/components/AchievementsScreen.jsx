@@ -2,6 +2,7 @@ import { ALL_ACHIEVEMENTS, getUnlockedAchievements } from '../lib/achievements'
 
 const CATEGORIES = [
   { id: 'squad',       label: '⚽ Squad Quality' },
+  { id: 'tournament',  label: '🥅 Tournament Run' },
   { id: 'funny',       label: '😅 Rough Days' },
   { id: 'collection',  label: '🗂️ Collection' },
   { id: 'challenge',   label: '🎮 Challenges' },

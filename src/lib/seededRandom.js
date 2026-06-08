@@ -18,6 +18,10 @@ function mulberry32(seed) {
   }
 }
 
+export function makeRng(seed) {
+  return mulberry32(seed)
+}
+
 export function seededShuffle(arr, seed) {
   const rng = mulberry32(seed)
   const a = [...arr]

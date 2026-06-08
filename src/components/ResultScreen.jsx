@@ -1,4 +1,5 @@
 import { calculateTeamScore, getTier, calculateGroupScores } from '../utils/scoring'
+import { simulateTournament } from '../utils/tournament'
 import { getAchievements } from '../lib/achievements'
 import PitchView from './PitchView'
 import { useState, useEffect } from 'react'
@@ -59,6 +60,7 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   const score = calculateTeamScore(slots)
   const tier = getTier(score)
   const groups = calculateGroupScores(slots)
+  const run = simulateTournament(slots, score, tier, seed)
   const achievements = getAchievements(slots, config || { mode })
   const [copyState, setCopyState] = useState('idle')
   const [name, setName] = useState(getSavedName)
@@ -143,7 +145,7 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   async function handleShareImage() {
     setImgState('working')
     try {
-      const blob = await buildShareImage({ slots, formation, mode, score, tier, groups })
+      const blob = await buildShareImage({ slots, formation, mode, score, tier, groups, run })
       const file = new File([blob], 'lift-the-trophy.png', { type: 'image/png' })
       // Prefer native share sheet (mobile), else download
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -229,6 +231,54 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
               <span className={`text-sm font-extrabold w-7 text-right tabular-nums shrink-0 ${score > 80 ? 'text-green-400' : score <= 50 ? 'text-red-500' : 'text-yellow-400'}`}>
                 {score}
               </span>
+            </div>
+          </div>
+
+          {/* Tournament run — match by match */}
+          <div className="bg-gray-800 rounded-2xl p-4 mb-6">
+            <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Tournament Run</p>
+            <div className="space-y-1.5">
+              {run.matches.map((m, i) => {
+                const chipCls = m.result === 'W'
+                  ? 'bg-green-500/20 text-green-400'
+                  : m.result === 'L'
+                    ? 'bg-red-500/20 text-red-400'
+                    : 'bg-yellow-400/20 text-yellow-400'
+                return (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <span className="text-[10px] text-gray-500 w-[5.5rem] shrink-0 leading-tight">{m.stage}</span>
+                    <span className="w-5 h-3.5 rounded-sm overflow-hidden inline-flex shrink-0 shadow-sm">
+                      <FlagImg nation={m.opponent} className="w-full h-full object-cover" />
+                    </span>
+                    <span className="text-gray-300 flex-1 truncate">{m.opponent}</span>
+                    <span className="text-white font-bold tabular-nums shrink-0">{m.gf}–{m.ga}</span>
+                    <span className={`text-[10px] font-extrabold rounded px-1.5 py-0.5 w-6 text-center shrink-0 ${chipCls}`}>
+                      {m.result}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            {run.matches.some(m => m.pens) && (
+              <p className="text-[10px] text-gray-500 mt-2">
+                {run.matches.filter(m => m.pens).map(m => `${m.stage} decided on penalties`).join(' · ')}
+              </p>
+            )}
+            <div className="mt-3 pt-3 border-t border-gray-700 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <div className="text-green-400 font-extrabold text-lg tabular-nums">{run.goalsFor}</div>
+                <div className="text-[10px] uppercase tracking-wider text-gray-500">Scored</div>
+              </div>
+              <div>
+                <div className="text-red-400 font-extrabold text-lg tabular-nums">{run.goalsAgainst}</div>
+                <div className="text-[10px] uppercase tracking-wider text-gray-500">Conceded</div>
+              </div>
+              <div>
+                <div className="text-white font-extrabold text-lg tabular-nums">
+                  {run.goalsFor - run.goalsAgainst >= 0 ? '+' : ''}{run.goalsFor - run.goalsAgainst}
+                </div>
+                <div className="text-[10px] uppercase tracking-wider text-gray-500">Diff</div>
+              </div>
             </div>
           </div>
 

@@ -1,5 +1,19 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { fetchScores, isConfigured } from '../lib/supabase'
+import { decodeSquad } from './ResultScreen'
+import { simulateTournament } from '../utils/tournament'
+
+// Reproduce the tournament run for a leaderboard row using the same inputs the
+// player saw (squad names + seed + score + tier), so goals match exactly.
+function runForRow(s) {
+  let slots = []
+  const hash = s.squad_url ? s.squad_url.split('#')[1] || '' : ''
+  if (hash.startsWith('s=')) {
+    const data = decodeSquad(hash.slice(2))
+    if (data?.s) slots = data.s.map(p => ({ player: { name: p.n } }))
+  }
+  return simulateTournament(slots, s.score, { label: s.tier }, s.seed)
+}
 
 const MODE_LABEL = { classic: 'Classic', expert: 'Expert', hardcore: '💀', daily: '⭐ Daily' }
 const TIER_EMOJI = {
@@ -40,6 +54,26 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [modeFilter, timeFilter, challengeSeed, groupCode])
+
+  // Attach goals from the simulated run, then rank by score → goal difference.
+  const ranked = useMemo(() => {
+    const list = scores
+      .map(s => {
+        const run = runForRow(s)
+        return { ...s, _gf: run.goalsFor, _ga: run.goalsAgainst, _gd: run.goalsFor - run.goalsAgainst }
+      })
+      .sort((a, b) =>
+        b.score - a.score ||
+        b._gd - a._gd ||
+        new Date(a.created_at) - new Date(b.created_at)
+      )
+    // Flag rows whose rank vs. an equal-score neighbour was decided by GD.
+    return list.map((s, i) => ({
+      ...s,
+      _tiebreak: (list[i - 1] && list[i - 1].score === s.score) ||
+                 (list[i + 1] && list[i + 1].score === s.score),
+    }))
+  }, [scores])
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-950 px-4 py-8 max-w-lg mx-auto">
@@ -102,9 +136,9 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
             </div>
           )}
 
-          {!loading && !error && scores.length > 0 && (
+          {!loading && !error && ranked.length > 0 && (
             <div className="space-y-2">
-              {scores.map((s, i) => (
+              {ranked.map((s, i) => (
                 <div
                   key={s.id}
                   className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
@@ -121,8 +155,27 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-white font-bold text-sm truncate">{s.player_name}</div>
-                    <div className="text-gray-400 text-xs">
+                    <div className="text-gray-400 text-xs truncate">
                       {TIER_EMOJI[s.tier] || ''} {s.tier} · {s.formation} · {MODE_LABEL[s.mode] || s.mode}
+                    </div>
+                    <div className="text-[11px] mt-0.5 tabular-nums flex items-center gap-1.5">
+                      <span>
+                        <span className="text-green-400 font-semibold">{s._gf}</span>
+                        <span className="text-gray-600"> scored · </span>
+                        <span className="text-red-400 font-semibold">{s._ga}</span>
+                        <span className="text-gray-600"> conceded · GD </span>
+                        <span className={`font-semibold ${s._tiebreak ? 'text-yellow-400' : 'text-gray-300'}`}>
+                          {s._gd >= 0 ? '+' : ''}{s._gd}
+                        </span>
+                      </span>
+                      {s._tiebreak && (
+                        <span
+                          className="text-[9px] font-bold text-yellow-400/90 bg-yellow-400/10 border border-yellow-400/25 rounded px-1 py-px shrink-0"
+                          title="Tied on score — ranked by goal difference"
+                        >
+                          ⚖️ GD
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="text-right shrink-0">

@@ -1,4 +1,5 @@
-import { calculateGroupScores, calculateTeamScore } from '../utils/scoring'
+import { calculateGroupScores, calculateTeamScore, getTier } from '../utils/scoring'
+import { simulateTournament } from '../utils/tournament'
 
 export const ALL_ACHIEVEMENTS = [
   // ── Top squad ──────────────────────────────────────────────────────────────
@@ -16,6 +17,13 @@ export const ALL_ACHIEVEMENTS = [
   { id: 'leaky_defence',   icon: '🕳️', label: 'Leaky Defence',     desc: 'GK + DEF both below 65',          category: 'funny' },
   { id: 'pub_team',        icon: '🍺', label: 'Pub Team',          desc: 'Team OVR below 65',               category: 'funny' },
   { id: 'sunday_league',   icon: '⛅', label: 'Sunday League',     desc: 'Team OVR below 55',               category: 'funny' },
+  // ── Tournament run (goals) ─────────────────────────────────────────────────
+  { id: 'goal_machine',    icon: '⚽', label: 'Goal Machine',      desc: 'Scored 15+ goals across the run',  category: 'tournament' },
+  { id: 'free_scoring',    icon: '🔥', label: 'Free-Scoring',      desc: 'Scored 10+ goals across the run',  category: 'tournament' },
+  { id: 'demolition',      icon: '💥', label: 'Demolition Job',    desc: 'Won a match by 4+ goals',          category: 'tournament' },
+  { id: 'iron_gloves',     icon: '🧤', label: 'Iron Gloves',       desc: 'Conceded 0 across the run',        category: 'tournament' },
+  { id: 'fortress',        icon: '🛡️', label: 'Fortress',          desc: 'Conceded 2 or fewer across the run', category: 'tournament' },
+  { id: 'total_domination',icon: '📈', label: 'Total Domination',  desc: 'Goal difference of +10 or better', category: 'tournament' },
   // ── Diversity / collection ─────────────────────────────────────────────────
   { id: 'united_nations',  icon: '🌍', label: 'United Nations',    desc: '11 players from 11 different nations', category: 'collection' },
   { id: 'one_flag',        icon: '🏳️', label: 'One Flag',          desc: 'All 11 from the same nation',     category: 'collection' },
@@ -41,11 +49,16 @@ export const ALL_ACHIEVEMENTS = [
   { id: 'streak_30',       icon: '🔥🔥🔥', label: 'Obsessed',      desc: '30-day daily streak',              category: 'streak' },
 ]
 
-function calcCheck(slots, config, g, score) {
+function calcCheck(slots, config, g, score, run) {
   const players = slots.filter(s => s.player)
   const nations = new Set(players.map(s => s.player.nation))
   const years = new Set(players.map(s => s.player.year))
   const tournaments = new Set(players.map(s => s.player.tournament))
+
+  const gf = run?.goalsFor ?? 0
+  const ga = run?.goalsAgainst ?? 0
+  const biggestWin = run?.matches.length
+    ? Math.max(...run.matches.map(m => m.gf - m.ga)) : 0
 
   const checks = {
     golden_squad:    () => score >= 90,
@@ -68,6 +81,12 @@ function calcCheck(slots, config, g, score) {
     wc_only:         () => players.length === 11 && !players.some(s => s.player.tournament === 'EURO'),
     mixed_bag:       () => tournaments.has('WC') && tournaments.has('EURO'),
     six_nations:     () => nations.size >= 6,
+    goal_machine:     () => gf >= 15,
+    free_scoring:     () => gf >= 10,
+    demolition:       () => biggestWin >= 4,
+    iron_gloves:      () => Boolean(run?.matches.length) && ga === 0,
+    fortress:         () => ga <= 2,
+    total_domination: () => (gf - ga) >= 10,
     pure:            () => (config?.skipsUsed ?? 0) === 0 && config?.mode !== 'hardcore',
     hardcore_hero:   () => config?.mode === 'hardcore' && score >= 80,
     hardcore_legend: () => config?.mode === 'hardcore' && score >= 88,
@@ -90,7 +109,9 @@ function calcCheck(slots, config, g, score) {
 export function getAchievements(slots, config) {
   const g = calculateGroupScores(slots)
   const score = calculateTeamScore(slots)
-  return calcCheck(slots, config, g, score)
+  const tier = getTier(score)
+  const run = simulateTournament(slots, score, tier, config?.seed)
+  return calcCheck(slots, config, g, score, run)
 }
 
 // Load all unlocked achievements from localStorage

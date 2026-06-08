@@ -7,7 +7,22 @@ function statColor(v) {
   return '#facc15'
 }
 
-export async function buildShareImage({ slots, formation, mode, score, tier, groups }) {
+// Draws a centered line made of coloured segments: [[text, color], ...]
+function drawSegments(ctx, segments, cy) {
+  const widths = segments.map(([t]) => ctx.measureText(t).width)
+  const total = widths.reduce((a, b) => a + b, 0)
+  const prevAlign = ctx.textAlign
+  ctx.textAlign = 'left'
+  let x = (ctx.canvas.width - total) / 2
+  segments.forEach(([t, color], i) => {
+    ctx.fillStyle = color
+    ctx.fillText(t, x, cy)
+    x += widths[i]
+  })
+  ctx.textAlign = prevAlign
+}
+
+export async function buildShareImage({ slots, formation, mode, score, tier, groups, run }) {
   const W = 1080, H = 1080
   const canvas = document.createElement('canvas')
   canvas.width = W; canvas.height = H
@@ -64,16 +79,28 @@ export async function buildShareImage({ slots, formation, mode, score, tier, gro
 
   // Result tier
   ctx.fillStyle = '#fff'
-  ctx.font = '800 76px system-ui, sans-serif'
-  ctx.fillText(`${tier.emoji} ${tier.label}`, W / 2, 850)
+  ctx.font = '800 70px system-ui, sans-serif'
+  ctx.fillText(`${tier.emoji} ${tier.label}`, W / 2, 838)
+
+  // Goals scored / conceded across the run
+  if (run) {
+    ctx.font = '700 30px system-ui, sans-serif'
+    drawSegments(ctx, [
+      ['⚽ ', '#9ca3af'],
+      [String(run.goalsFor), '#4ade80'],
+      [' scored   ·   ', '#9ca3af'],
+      [String(run.goalsAgainst), '#ef4444'],
+      [' conceded', '#9ca3af'],
+    ], 898)
+  }
 
   // Score
   ctx.fillStyle = '#facc15'
-  ctx.font = '800 120px system-ui, sans-serif'
-  ctx.fillText(String(score), W / 2, 980)
+  ctx.font = '800 100px system-ui, sans-serif'
+  ctx.fillText(String(score), W / 2, 992)
   ctx.fillStyle = '#9ca3af'
-  ctx.font = '600 28px system-ui, sans-serif'
-  ctx.fillText('TEAM SCORE', W / 2, 1020)
+  ctx.font = '600 26px system-ui, sans-serif'
+  ctx.fillText('TEAM SCORE', W / 2, 1026)
 
   // Group mini-bars (GK DEF MID ATT) along the bottom
   const order = [['GK', groups.GK], ['DEF', groups.DEF], ['MID', groups.MID], ['ATT', groups.ATT]]
