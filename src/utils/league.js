@@ -251,7 +251,7 @@ export function awardStats(slots, matches, rng, getOpponentPlayers) {
     }
   }
   const yourStats = filled.map((s, i) => ({
-    name: s.player.name, position: s.position, team: null,
+    name: s.player.name, position: s.position, team: null, nation: s.player.nation ?? null,
     goals: pg[i], assists: pa[i], contributions: pg[i] + pa[i],
   }))
   const oppStats = [...oppAcc.values()].map(o => ({ ...o, contributions: o.goals + o.assists }))

@@ -549,7 +549,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
                         {isPL ? '🏅 Player of the Season' : '🌟 Player of the Tournament'}
                       </div>
                       <div className="text-white font-bold text-xs leading-tight truncate">{p.name}</div>
-                      {p.team && <div className="text-[10px] text-gray-400 mt-0.5 truncate">{p.team}</div>}
+                      {(p.team || (!isPL && p.nation)) && <div className="text-[10px] text-gray-400 mt-0.5 truncate">{p.team ?? p.nation}</div>}
                       <div className="text-[10px] mt-1 flex gap-1.5 flex-wrap">
                         <span className="text-gray-500">{p.position}</span>
                         <span className="text-green-400 font-bold">{p.goals}G</span>
@@ -562,7 +562,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
                   <div className="bg-gray-700/60 rounded-xl p-3">
                     <div className="text-[9px] uppercase tracking-wider text-yellow-400 mb-1.5">🥾 Golden Boot</div>
                     <div className="text-white font-bold text-xs leading-tight truncate">{run.goldenBoot.name}</div>
-                    {run.goldenBoot.team && <div className="text-[10px] text-gray-400 mt-0.5 truncate">{run.goldenBoot.team}</div>}
+                    {(run.goldenBoot.team || (!isPL && run.goldenBoot.nation)) && <div className="text-[10px] text-gray-400 mt-0.5 truncate">{run.goldenBoot.team ?? run.goldenBoot.nation}</div>}
                     <div className="text-[10px] mt-1 flex gap-1.5 flex-wrap">
                       <span className="text-gray-500">{run.goldenBoot.position}</span>
                       <span className="text-green-400 font-bold">{run.goldenBoot.goals} goals</span>
