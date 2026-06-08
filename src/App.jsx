@@ -93,7 +93,9 @@ export default function App() {
   }
 
   function handleDraftDone(slots, skips = 0) {
-    const isHardcore = config?.mode === 'hardcore'
+    // Daily challenges run at a rotating difficulty; the hardcore reveal flow
+    // keys off the effective difficulty, not the 'daily' tracking mode.
+    const isHardcore = (config?.difficulty || config?.mode) === 'hardcore'
     setFinalSlots(slots)
     setSkipsUsed(skips)
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { isConfigured } from '../lib/supabase'
 import { todaySeed } from '../lib/seededRandom'
-import { isDailyDoneToday, timeUntilNextDaily } from '../lib/daily'
+import { isDailyDoneToday, timeUntilNextDaily, dailyDifficulty, DIFFICULTY_LABEL } from '../lib/daily'
 import { isMuted, toggleMuted } from '../lib/sound'
 import { getChallengeStreak } from '../lib/challengeStreak'
 import Logo from './Logo'
@@ -82,6 +82,7 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
   }, [dailyDone])
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
+  const todayDifficulty = dailyDifficulty()
   const hasStreak = streak?.streak > 0
   const hasChallengeStreak = challengeStreak?.streak > 0
 
@@ -136,19 +137,20 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
                   <span className="text-gray-400 font-extrabold text-base">✅ Daily Complete</span>
                   {hasStreak && <span className="text-xs text-orange-400 font-bold">🔥 {streak.streak}</span>}
                 </div>
-                <div className="text-gray-500 text-xs">Next challenge in {countdown}</div>
+                <div className="text-gray-500 text-xs">Today was {DIFFICULTY_LABEL[todayDifficulty]} · Next in {countdown}</div>
               </div>
             </div>
           </div>
         ) : (
           <button
-            onClick={() => onStart({ mode: 'daily', formation, seed: todaySeed(), isDaily: true })}
+            onClick={() => onStart({ mode: 'daily', difficulty: todayDifficulty, formation, seed: todaySeed(), isDaily: true })}
             className="w-full rounded-2xl border-2 border-yellow-400/60 bg-yellow-400/10 hover:bg-yellow-400/20 p-4 text-left transition-all group"
           >
             <div className="flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-yellow-400 font-extrabold text-base">⭐ Daily Challenge</span>
+                  <span className="text-[10px] bg-gray-800 text-gray-300 font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">{DIFFICULTY_LABEL[todayDifficulty]}</span>
                   {hasStreak && <span className="text-xs text-orange-400 font-bold">🔥 {streak.streak}</span>}
                 </div>
                 <div className="text-gray-400 text-xs">Everyone gets the same spins · {today}</div>

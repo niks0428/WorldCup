@@ -308,10 +308,13 @@ function BenchPanel({
 }
 
 export default function DraftScreen({ config, onComplete }) {
-  const isHardcore = config.mode === 'hardcore'
-  const isClassic = config.mode === 'classic'
-  const maxSkips = SKIPS_BY_MODE[config.mode] ?? 3
-  const subCount = SUBS_BY_MODE[config.mode] ?? 0
+  // Daily challenges carry a `difficulty` (classic/expert/hardcore) that drives
+  // the draft rules, while config.mode stays 'daily' for leaderboard/streak.
+  const mode = config.difficulty || config.mode
+  const isHardcore = mode === 'hardcore'
+  const isClassic = mode === 'classic'
+  const maxSkips = SKIPS_BY_MODE[mode] ?? 3
+  const subCount = SUBS_BY_MODE[mode] ?? 0
   const formationDef = formations[config.formation]
   // Substitutes bench — count varies by mode (expert/hardcore have none).
   const benchTemplate = Array.from({ length: subCount }, (_, i) => ({
@@ -412,7 +415,7 @@ export default function DraftScreen({ config, onComplete }) {
       )
     }
 
-    const blindMode = isHardcore || config.mode === 'expert'
+    const blindMode = isHardcore || mode === 'expert'
     setSquad(available.sort((a, b) =>
       blindMode ? a.name.localeCompare(b.name) : b.overall - a.overall
     ))
@@ -764,7 +767,7 @@ export default function DraftScreen({ config, onComplete }) {
                   fitLabel={fitLabel}
                   fitCls={fitCls}
                   onClick={() => pickPlayer(player)}
-                  hideStats={isHardcore || config.mode === 'expert'}
+                  hideStats={isHardcore || mode === 'expert'}
                 />
               )
             })}

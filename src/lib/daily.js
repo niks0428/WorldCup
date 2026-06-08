@@ -1,4 +1,22 @@
+import { makeRng } from './seededRandom'
+
 const KEY = 'ltt_daily_done'
+
+// The daily challenge's difficulty rotates each day. It's derived from the date
+// so everyone gets the same difficulty on the same day (and it's known up-front
+// for display). Salted so it doesn't correlate with the spin seed (todaySeed).
+export const DAILY_DIFFICULTIES = ['classic', 'expert', 'hardcore']
+
+export function dailyDifficulty(date = new Date().toISOString().split('T')[0]) {
+  const r = makeRng('difficulty|' + date)()
+  return DAILY_DIFFICULTIES[Math.floor(r * DAILY_DIFFICULTIES.length)]
+}
+
+export const DIFFICULTY_LABEL = {
+  classic:  '⚽ Classic',
+  expert:   '🎯 Expert',
+  hardcore: '💀 Hardcore',
+}
 
 // Records the date string of the last completed daily challenge.
 export function markDailyDone() {

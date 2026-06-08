@@ -49,6 +49,11 @@ export const ALL_ACHIEVEMENTS = [
   { id: 'streak_30',       icon: '🔥🔥🔥', label: 'Obsessed',      desc: '30-day daily streak',              category: 'streak' },
 ]
 
+// A hardcore run includes a daily challenge that landed on hardcore difficulty.
+function isHardcoreRun(config) {
+  return config?.mode === 'hardcore' || config?.difficulty === 'hardcore'
+}
+
 function calcCheck(slots, config, g, score, run) {
   const players = slots.filter(s => s.player)
   const nations = new Set(players.map(s => s.player.nation))
@@ -87,9 +92,9 @@ function calcCheck(slots, config, g, score, run) {
     iron_gloves:      () => Boolean(run?.matches.length) && ga === 0,
     fortress:         () => ga <= 2,
     total_domination: () => (gf - ga) >= 10,
-    pure:            () => (config?.skipsUsed ?? 0) === 0 && config?.mode !== 'hardcore',
-    hardcore_hero:   () => config?.mode === 'hardcore' && score >= 80,
-    hardcore_legend: () => config?.mode === 'hardcore' && score >= 88,
+    pure:            () => (config?.skipsUsed ?? 0) === 0 && config?.mode !== 'hardcore' && config?.difficulty !== 'hardcore',
+    hardcore_hero:   () => isHardcoreRun(config) && score >= 80,
+    hardcore_legend: () => isHardcoreRun(config) && score >= 88,
     daily_legend:    () => config?.mode === 'daily' && score >= 88,
     daily_winner:    () => config?.mode === 'daily' && score >= 90,
     streak_3:        () => (config?.streak ?? 0) >= 3,
