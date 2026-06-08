@@ -81,25 +81,35 @@ export default function App() {
   const [skipsUsed, setSkipsUsed] = useState(0)
 
   useEffect(() => {
-    const hash = window.location.hash
-    const shared = squadFromHash(hash)
-    if (shared) {
-      // A PL squad stores the club name in `nation`; detect it so the result
-      // screen runs the league sim instead of the cup.
-      const comp = shared.slots.some(s => s.player?.tournament === 'PL') ? 'pl' : 'wc'
-      setCompetition(comp)
-      setFinalSlots(shared.slots)
-      setConfig({ formation: shared.formation, mode: shared.mode, competition: comp })
-      setScreen('result')
-      return
+    // Open whatever the URL fragment points at: a shared squad (#s=) or a
+    // challenge (#c=). Runs on mount AND on every hashchange — a same-origin
+    // link (e.g. the leaderboard "View →") only swaps the fragment without a
+    // full reload, especially in the same tab on mobile, so without listening
+    // for hashchange the target squad would never render.
+    function applyHash() {
+      const hash = window.location.hash
+      const shared = squadFromHash(hash)
+      if (shared) {
+        // A PL squad stores the club name in `nation`; detect it so the result
+        // screen runs the league sim instead of the cup.
+        const comp = shared.slots.some(s => s.player?.tournament === 'PL') ? 'pl' : 'wc'
+        setCompetition(comp)
+        setFinalSlots(shared.slots)
+        setConfig({ formation: shared.formation, mode: shared.mode, competition: comp })
+        setScreen('result')
+        return
+      }
+      const challenge = challengeFromHash(hash)
+      if (challenge) {
+        setLastChallengeSeed(challenge.seed)
+        setCompetition(challenge.competition)
+        setConfig(challenge)
+        setScreen('draft')
+      }
     }
-    const challenge = challengeFromHash(hash)
-    if (challenge) {
-      setLastChallengeSeed(challenge.seed)
-      setCompetition(challenge.competition)
-      setConfig(challenge)
-      setScreen('draft')
-    }
+    applyHash()
+    window.addEventListener('hashchange', applyHash)
+    return () => window.removeEventListener('hashchange', applyHash)
   }, [])
 
   // The daily streak is per competition — show the active one's.
