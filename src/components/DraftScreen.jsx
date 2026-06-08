@@ -395,9 +395,9 @@ export default function DraftScreen({ config, onComplete }) {
       // Show players that can play in the assigned position (0.85+), fall back to all if none
       const compatible = pool.filter(p => getFitMultiplier(assignedSlot.position, p.positions) >= 0.85)
       available = compatible.length > 0 ? compatible : pool
-    } else if (getEmptyPitchSlots().length === 0) {
-      // Starting XI complete — now drafting subs, so any remaining player can
-      // take an open bench slot.
+    } else if (benchSlots.some(s => !s.player)) {
+      // While any substitute slot is open, every player is pickable — anyone
+      // can take a bench spot regardless of position.
       available = pool
     } else {
       const emptyPitch = getEmptyPitchSlots()
@@ -747,11 +747,12 @@ export default function DraftScreen({ config, onComplete }) {
 
             {squad.map((player, i) => {
               const targetSlots = isHardcore ? [assignedSlot] : getEmptyPitchSlots()
-              const benchOnly = !isHardcore && targetSlots.length === 0
               const bestFit = targetSlots.reduce((best, s) => {
                 const m = getFitMultiplier(s.position, player.positions)
                 return m > best.mult ? { mult: m, pos: s.position } : best
               }, { mult: 0, pos: '' })
+              // No eligible empty pitch slot → this player can only be a sub.
+              const benchOnly = !isHardcore && bestFit.mult < 0.85
               const fitCls = benchOnly ? 'text-green-400' : bestFit.mult === 1.0 ? 'text-green-400' : bestFit.mult >= 0.85 ? 'text-yellow-400' : 'text-orange-400'
               const fitLabel = benchOnly ? 'Sub' : bestFit.mult === 1.0 ? 'Natural' : bestFit.mult >= 0.85 ? 'Compatible' : 'Off-pos'
               return (
