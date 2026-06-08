@@ -95,11 +95,11 @@ export default function HowItWorksScreen({ onBack }) {
         <div className="bg-gray-800 rounded-2xl divide-y divide-gray-700 text-sm">
           <div className="px-4 py-3">
             <div className="text-white font-bold mb-0.5">Classic</div>
-            <div className="text-gray-400">Full squad shown with stats, sorted by rating. You choose which slot to fill. 3 skips.</div>
+            <div className="text-gray-400">Full squad shown with stats, sorted by rating. You choose which slot to fill. 3 skips, 3 subs.</div>
           </div>
           <div className="px-4 py-3">
             <div className="text-white font-bold mb-0.5">Expert</div>
-            <div className="text-gray-400">Position-compatible players only. No stats shown, sorted alphabetically. 3 skips.</div>
+            <div className="text-gray-400">Position-compatible players only. No stats shown, sorted alphabetically. 1 skip, no subs.</div>
           </div>
           <div className="px-4 py-3">
             <div className="text-red-400 font-bold mb-0.5">💀 Hardcore</div>

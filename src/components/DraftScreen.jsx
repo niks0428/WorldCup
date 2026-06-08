@@ -41,8 +41,10 @@ function pickRandom(arr) {
 
 const ALL_PAIRS = buildPairs()
 const ITEM_H = 60
-const MAX_SKIPS = 3
-const SUB_COUNT = 5
+// Per-mode allowances. Classic is the most forgiving; expert is leaner (fewer
+// skips, no bench); hardcore has neither.
+const SKIPS_BY_MODE = { classic: 3, expert: 1, hardcore: 0 }
+const SUBS_BY_MODE  = { classic: 3, expert: 0, hardcore: 0 }
 
 // A bench/SUB slot accepts any player; a pitch slot needs a compatible position.
 function isBench(slot) {
@@ -308,13 +310,13 @@ function BenchPanel({
 export default function DraftScreen({ config, onComplete }) {
   const isHardcore = config.mode === 'hardcore'
   const isClassic = config.mode === 'classic'
+  const maxSkips = SKIPS_BY_MODE[config.mode] ?? 3
+  const subCount = SUBS_BY_MODE[config.mode] ?? 0
   const formationDef = formations[config.formation]
-  // Bench: 5 substitute slots — non-hardcore only.
-  const benchTemplate = isHardcore
-    ? []
-    : Array.from({ length: SUB_COUNT }, (_, i) => ({
-        id: `SUB${i + 1}`, position: 'SUB', group: 'SUB',
-      }))
+  // Substitutes bench — count varies by mode (expert/hardcore have none).
+  const benchTemplate = Array.from({ length: subCount }, (_, i) => ({
+    id: `SUB${i + 1}`, position: 'SUB', group: 'SUB',
+  }))
   const initialSlots = [
     ...formationDef.slots.map(s => ({ ...s, player: null })),
     ...benchTemplate.map(s => ({ ...s, player: null })),
@@ -331,7 +333,7 @@ export default function DraftScreen({ config, onComplete }) {
   const [squad, setSquad] = useState([])
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [reelKey, setReelKey] = useState(0)
-  const [skipsLeft, setSkipsLeft] = useState(MAX_SKIPS)
+  const [skipsLeft, setSkipsLeft] = useState(maxSkips)
   // Idle-phase free rearrange: slot id of the placed player picked up to move.
   const [movingSlotId, setMovingSlotId] = useState(null)
   // Hardcore: pre-assigned slot for this spin
@@ -350,14 +352,14 @@ export default function DraftScreen({ config, onComplete }) {
   // "Play the Cup" confirm button so the player can add subs / rearrange first.
   useEffect(() => {
     if (isHardcore && startersFilled === 11) {
-      setTimeout(() => onComplete(slots, MAX_SKIPS - skipsLeft), 600)
+      setTimeout(() => onComplete(slots, maxSkips - skipsLeft), 600)
     }
   }, [startersFilled])
 
   function confirmAndPlay() {
     if (!xiComplete) return
     // The cup is played by the starting XI only — bench is never passed on.
-    onComplete(starterSlots, MAX_SKIPS - skipsLeft)
+    onComplete(starterSlots, maxSkips - skipsLeft)
   }
 
   function getEmptySlots(currentSlots = slots) {

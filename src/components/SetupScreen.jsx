@@ -61,8 +61,8 @@ function FormationPreview({ formation }) {
   )
 }
 const MODES = [
-  { id: 'classic',  label: 'Classic',  badge: null, desc: 'Full squad, stats visible. Pick your slot. 3 skips.' },
-  { id: 'expert',   label: 'Expert',   badge: null, desc: 'Position-compatible players only, no stats. 3 skips.' },
+  { id: 'classic',  label: 'Classic',  badge: null, desc: 'Full squad, stats visible. Pick your slot. 3 skips, 3 subs.' },
+  { id: 'expert',   label: 'Expert',   badge: null, desc: 'Position-compatible players only, no stats. 1 skip, no subs.' },
   { id: 'hardcore', label: 'Hardcore', badge: '💀', desc: 'Random position assigned. No stats, no skips. Stats revealed at the end.' },
 ]
 
