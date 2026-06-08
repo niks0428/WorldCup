@@ -38,6 +38,11 @@ const TIER_EMOJI = {
   'World Cup Winners': '🏆', 'Finalists': '🥈', 'Semi-finalists': '🥉',
   'Quarter-finalists': '🎯', 'Round of 16': '🔵', 'Group Stage Exit': '⚫',
 }
+// How far the team got — the primary leaderboard sort (winners first).
+const TIER_RANK = {
+  'World Cup Winners': 6, 'Finalists': 5, 'Semi-finalists': 4,
+  'Quarter-finalists': 3, 'Round of 16': 2, 'Group Stage Exit': 1,
+}
 
 const TIME_TABS = [
   { id: 'alltime', label: 'All Time' },
@@ -80,16 +85,19 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
         const run = runForRow(s)
         return { ...s, _gf: run.goalsFor, _ga: run.goalsAgainst, _gd: run.goalsFor - run.goalsAgainst }
       })
+      // Rank by how far the team got (winners first), then team rating, then
+      // goal difference, then who got there first.
       .sort((a, b) =>
+        (TIER_RANK[b.tier] || 0) - (TIER_RANK[a.tier] || 0) ||
         b.score - a.score ||
         b._gd - a._gd ||
         new Date(a.created_at) - new Date(b.created_at)
       )
-    // Flag rows whose rank vs. an equal-score neighbour was decided by GD.
+    // Flag rows split from a same-tier, same-rating neighbour by goal difference.
+    const sameBucket = (x, y) => x && y && x.tier === y.tier && x.score === y.score
     return list.map((s, i) => ({
       ...s,
-      _tiebreak: (list[i - 1] && list[i - 1].score === s.score) ||
-                 (list[i + 1] && list[i + 1].score === s.score),
+      _tiebreak: sameBucket(list[i - 1], s) || sameBucket(list[i + 1], s),
     }))
   }, [scores])
 
