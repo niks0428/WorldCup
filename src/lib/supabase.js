@@ -14,8 +14,9 @@ function headers() {
 
 // ── Scores ────────────────────────────────────────────────────────────────────
 
-export async function submitScore({ playerName, score, tier, formation, mode, squadUrl, seed, challengeDate, groupCode, streak, challengeStreak }) {
+export async function submitScore({ playerName, score, tier, formation, mode, squadUrl, seed, challengeDate, groupCode, streak, challengeStreak, competition }) {
   const body = { player_name: playerName, score, tier, formation, mode, squad_url: squadUrl }
+  body.competition = competition === 'pl' ? 'pl' : 'wc'
   if (seed)          body.seed = seed
   if (challengeDate) body.challenge_date = challengeDate
   if (groupCode)     body.group_code = groupCode
@@ -28,7 +29,7 @@ export async function submitScore({ playerName, score, tier, formation, mode, sq
   if (!res.ok) throw new Error(`Submit failed: ${res.status}`)
 }
 
-export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', seed, groupCode } = {}) {
+export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', seed, groupCode, competition = 'wc' } = {}) {
   const params = new URLSearchParams()
   params.set('select', '*')
   params.set('order', 'score.desc,created_at.asc')
@@ -39,6 +40,8 @@ export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', 
   } else if (seed) {
     params.set('seed', `eq.${seed}`)
   } else {
+    // The two competitions are separate boards.
+    params.set('competition', `eq.${competition === 'pl' ? 'pl' : 'wc'}`)
     if (modeFilter !== 'all') params.set('mode', `eq.${modeFilter}`)
     if (timeFilter === 'week') {
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()

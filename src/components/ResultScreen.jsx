@@ -112,6 +112,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
       seed: seed || null,
       challengeDate: isDaily ? today : null,
       groupCode: groupCode || null,
+      competition,
       streak: streak || null,
       // The recording effect runs first and persists the new streak, so read it
       // straight from localStorage rather than racing React state.

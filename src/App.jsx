@@ -222,6 +222,7 @@ export default function App() {
           onBack={() => setScreen(finalSlots ? 'result' : 'setup')}
           challengeSeed={leaderboardSeed}
           groupCode={leaderboardGroup}
+          competition={competition}
         />
       )}
       {screen === 'privacy' && <PrivacyScreen onBack={() => setScreen('setup')} />}

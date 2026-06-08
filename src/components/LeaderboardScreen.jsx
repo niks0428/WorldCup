@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from 'react'
 import { fetchScores, fetchTopStreaks, isConfigured } from '../lib/supabase'
 import { decodeSquad } from './ResultScreen'
 import { simulateTournament } from '../utils/tournament'
+import { simulateLeague, LEAGUE_TIER_META } from '../utils/league'
 
-// Reproduce the tournament run for a leaderboard row using the same inputs the
-// player saw (squad names + seed + score + tier), so goals match exactly.
-function runForRow(s) {
+// Reproduce the run for a leaderboard row using the same inputs the player saw
+// (squad names + seed + score), so goals match exactly. Premier League rows
+// replay the 38-game season; World Cup rows replay the knockout cup.
+function runForRow(s, competition) {
   try {
     let slots = []
     const hash = s.squad_url ? s.squad_url.split('#')[1] || '' : ''
@@ -13,7 +15,9 @@ function runForRow(s) {
       const data = decodeSquad(hash.slice(2))
       if (Array.isArray(data?.s)) slots = data.s.map(p => ({ player: { name: p?.n } }))
     }
-    return simulateTournament(slots, s.score, s.seed)
+    return competition === 'pl'
+      ? simulateLeague(slots, s.score, s.seed)
+      : simulateTournament(slots, s.score, s.seed)
   } catch {
     // Never let one malformed/hostile row break the whole leaderboard render.
     return { goalsFor: 0, goalsAgainst: 0 }
@@ -34,15 +38,20 @@ function safeHttpUrl(url) {
 }
 
 const MODE_LABEL = { classic: 'Classic', expert: 'Expert', hardcore: '💀', daily: '⭐ Daily' }
-const TIER_EMOJI = {
+const WC_TIER_EMOJI = {
   'World Cup Winners': '🏆', 'Finalists': '🥈', 'Semi-finalists': '🥉',
   'Quarter-finalists': '🎯', 'Round of 16': '🔵', 'Group Stage Exit': '⚫',
 }
 // How far the team got — the primary leaderboard sort (winners first).
-const TIER_RANK = {
+const WC_TIER_RANK = {
   'World Cup Winners': 6, 'Finalists': 5, 'Semi-finalists': 4,
   'Quarter-finalists': 3, 'Round of 16': 2, 'Group Stage Exit': 1,
 }
+// Premier League tiers, keyed by the stored label (run.tierMeta.label). Built
+// from LEAGUE_TIER_META (declared best→worst), so rank descends with order.
+const PL_LABELS = Object.values(LEAGUE_TIER_META)
+const PL_TIER_EMOJI = Object.fromEntries(PL_LABELS.map(m => [m.label, m.emoji]))
+const PL_TIER_RANK = Object.fromEntries(PL_LABELS.map((m, i) => [m.label, PL_LABELS.length - i]))
 
 const TIME_TABS = [
   { id: 'alltime', label: 'All Time' },
@@ -64,20 +73,28 @@ const SORT_TABS = [
 ]
 
 // The chosen sort field's raw value for a row. 'desc' = highest value first.
-function primaryVal(s, sortBy) {
+function primaryVal(s, sortBy, tierRank) {
   if (sortBy === 'rating') return s.score
   if (sortBy === 'gd') return s._gd
   if (sortBy === 'gf') return s._gf
   if (sortBy === 'ga') return s._ga
-  return TIER_RANK[s.tier] || 0 // placement
+  return tierRank[s.tier] || 0 // placement
 }
 
 function getSavedName() { try { return localStorage.getItem('ltt_player_name') || '' } catch { return '' } }
 
-export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) {
+export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, competition = 'wc' }) {
   const [scores, setScores] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  // Separate boards per competition; default to whichever you came from.
+  const [comp, setComp] = useState(competition === 'pl' ? 'pl' : 'wc')
+  const isPL = comp === 'pl'
+  const tierEmoji = isPL ? PL_TIER_EMOJI : WC_TIER_EMOJI
+  const tierRank = isPL ? PL_TIER_RANK : WC_TIER_RANK
+  // Competition toggle only on the general board (challenge/group views are
+  // their own scoped lists).
+  const showCompToggle = !challengeSeed && !groupCode
   const [timeFilter, setTimeFilter] = useState('alltime')
   const [modeFilter, setModeFilter] = useState('all')
   const [sortBy, setSortBy] = useState('placement')
@@ -99,11 +116,12 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
       timeFilter,
       seed: challengeSeed || undefined,
       groupCode: groupCode || undefined,
+      competition: comp,
     })
       .then(setScores)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [modeFilter, timeFilter, challengeSeed, groupCode, board])
+  }, [modeFilter, timeFilter, challengeSeed, groupCode, board, comp])
 
   useEffect(() => {
     if (!isConfigured || board !== 'streaks') return
@@ -122,15 +140,15 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
   const ranked = useMemo(() => {
     const list = scores
       .map(s => {
-        const run = runForRow(s)
+        const run = runForRow(s, comp)
         return { ...s, _gf: run.goalsFor, _ga: run.goalsAgainst, _gd: run.goalsFor - run.goalsAgainst }
       })
       // Sort by the chosen field + direction, then a stable best-first chain
       // (placement → rating → goal difference → earliest) to break ties.
       .sort((a, b) => {
-        const diff = primaryVal(b, sortBy) - primaryVal(a, sortBy)
+        const diff = primaryVal(b, sortBy, tierRank) - primaryVal(a, sortBy, tierRank)
         if (diff) return sortDir === 'asc' ? -diff : diff
-        return (TIER_RANK[b.tier] || 0) - (TIER_RANK[a.tier] || 0) ||
+        return (tierRank[b.tier] || 0) - (tierRank[a.tier] || 0) ||
           b.score - a.score ||
           b._gd - a._gd ||
           new Date(a.created_at) - new Date(b.created_at)
@@ -141,7 +159,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
       ...s,
       _tiebreak: sameBucket(list[i - 1], s) || sameBucket(list[i + 1], s),
     }))
-  }, [scores, sortBy, sortDir])
+  }, [scores, sortBy, sortDir, tierRank])
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-950 px-4 py-8 max-w-lg mx-auto">
@@ -154,6 +172,25 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
             : '🏅 Leaderboard'}
         </h1>
       </div>
+
+      {/* Competition board — World Cup vs Premier League (separate boards) */}
+      {isConfigured && showCompToggle && board === 'scores' && (
+        <div className="flex gap-2 mb-4">
+          {[['wc', '🌍 World Cup'], ['pl', '🦁 Premier League']].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => { setComp(id); if (id === 'pl' && timeFilter === 'daily') setTimeFilter('alltime') }}
+              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
+                comp === id
+                  ? (id === 'pl' ? 'bg-sky-400 text-gray-900' : 'bg-yellow-400 text-gray-900')
+                  : 'bg-gray-800 text-gray-400 hover:text-white'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Scores vs. win-streak board */}
       {isConfigured && showStreakToggle && (
@@ -185,7 +222,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
           {/* Time filter */}
           {board === 'scores' && !challengeSeed && (
             <div className="flex gap-2 mb-3">
-              {TIME_TABS.map(t => (
+              {TIME_TABS.filter(t => t.id !== 'daily' || !isPL).map(t => (
                 <button
                   key={t.id}
                   onClick={() => setTimeFilter(t.id)}
@@ -291,7 +328,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
                   <div className="flex-1 min-w-0">
                     <div className="text-white font-bold text-sm truncate">{s.player_name}</div>
                     <div className="text-gray-400 text-xs truncate">
-                      {TIER_EMOJI[s.tier] || ''} {s.tier} · {s.formation} · {MODE_LABEL[s.mode] || s.mode}
+                      {tierEmoji[s.tier] || ''} {s.tier} · {s.formation} · {MODE_LABEL[s.mode] || s.mode}
                     </div>
                     <div className="text-[11px] mt-0.5 tabular-nums flex items-center gap-1.5">
                       <span>
