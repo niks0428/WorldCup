@@ -262,9 +262,6 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
           <button onClick={onHowItWorks}   className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">ℹ️ How to Score</button>
           <button onClick={onAchievements} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">🏆 Achievements</button>
           <button onClick={onChallenges}   className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">🤝 Challenges</button>
-          {isConfigured && (
-            <button onClick={onGroup} className="col-span-2 py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">{currentGroup ? `👥 ${currentGroup.name}` : '👥 Groups'}</button>
-          )}
         </div>
 
         {/* Browse everyone in the spin pool */}
@@ -272,11 +269,12 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
           🔎 Players in the Spin
         </button>
 
-        {/* Leaderboard — the long button at the bottom */}
+        {/* Groups + Leaderboard share the bottom row */}
         {isConfigured && (
-          <button onClick={onLeaderboard} className="w-full py-3 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white text-sm font-bold transition-colors">
-            🏅 Leaderboard
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={onGroup} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">{currentGroup ? `👥 ${currentGroup.name}` : '👥 Groups'}</button>
+            <button onClick={onLeaderboard} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white text-sm font-bold transition-colors">🏅 Leaderboard</button>
+          </div>
         )}
       </div>
 
