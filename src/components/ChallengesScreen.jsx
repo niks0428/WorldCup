@@ -5,8 +5,9 @@ import { getChallengeStreak, getLastChallengeSeed } from '../lib/challengeStreak
 const NAME_KEY = 'ltt_player_name'
 function getSavedName() { try { return localStorage.getItem(NAME_KEY) || '' } catch { return '' } }
 
-export default function ChallengesScreen({ onBack, onViewResults }) {
-  const [local] = useState(() => getChallengeStreak())
+export default function ChallengesScreen({ onBack, onViewResults, competition = 'wc' }) {
+  const isPL = competition === 'pl'
+  const [local] = useState(() => getChallengeStreak(competition))
   const [lastSeed] = useState(() => getLastChallengeSeed())
   const [streaks, setStreaks] = useState([])
   const [loading, setLoading] = useState(true)
@@ -16,17 +17,20 @@ export default function ChallengesScreen({ onBack, onViewResults }) {
   useEffect(() => {
     if (!isConfigured) { setLoading(false); return }
     setLoading(true); setError(null)
-    fetchTopStreaks({ limit: 20 })
+    fetchTopStreaks({ limit: 20, competition })
       .then(setStreaks)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [competition])
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-950 px-4 py-8 max-w-lg mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors text-sm">← Back</button>
         <h1 className="text-2xl font-extrabold text-white">🤝 Challenges</h1>
+        <span className={`ml-auto text-xs font-bold px-2 py-1 rounded-full ${isPL ? 'bg-sky-400/15 text-sky-400' : 'bg-yellow-400/15 text-yellow-400'}`}>
+          {isPL ? '🦁 Premier League' : '🌍 World Cup'}
+        </span>
       </div>
 
       <p className="text-gray-400 text-sm mb-6">

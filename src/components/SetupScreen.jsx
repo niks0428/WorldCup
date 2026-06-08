@@ -74,7 +74,7 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
   const [dailyDone] = useState(() => isDailyDoneToday())
   const [countdown, setCountdown] = useState(() => timeUntilNextDaily().label)
   const [muted, setMuted] = useState(() => isMuted())
-  const [challengeStreak] = useState(() => getChallengeStreak())
+  const [challengeStreak] = useState(() => getChallengeStreak(competition))
 
   useEffect(() => {
     if (!dailyDone) return
@@ -84,7 +84,7 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
   const todayDifficulty = dailyDifficulty()
-  const hasStreak = streak?.streak > 0
+  const hasStreak = !isPL && streak?.streak > 0   // daily streak is World Cup only
   const hasChallengeStreak = challengeStreak?.streak > 0
 
   return (

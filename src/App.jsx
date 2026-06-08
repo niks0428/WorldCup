@@ -52,14 +52,16 @@ function squadFromHash(hash) {
 
 function challengeFromHash(hash) {
   if (!hash.startsWith('#c=')) return null
-  // formation|seed[|challengerScore|challengerName]. Neither formation nor seed
-  // contains '|', and the name is URI-encoded, so a plain split is safe. The
-  // score/name are optional — legacy links (formation|seed) still work.
-  const [formation, seed, scoreStr, nameEnc] = hash.slice(3).split('|')
+  // formation|seed[|challengerScore|challengerName|competition]. Neither
+  // formation nor seed contains '|', and the name is URI-encoded, so a plain
+  // split is safe. Everything after seed is optional — legacy links
+  // (formation|seed) and pre-competition links still work (default 'wc').
+  const [formation, seed, scoreStr, nameEnc, compStr] = hash.slice(3).split('|')
   if (!formations[formation] || !seed) return null
   const parsedScore = parseInt(scoreStr, 10)
   return {
     formation, seed, mode: 'classic', isChallenge: true,
+    competition: compStr === 'pl' ? 'pl' : 'wc',
     challengerScore: Number.isFinite(parsedScore) ? parsedScore : undefined,
     challengerName: nameEnc ? decodeURIComponent(nameEnc) : undefined,
   }
@@ -91,7 +93,12 @@ export default function App() {
       return
     }
     const challenge = challengeFromHash(hash)
-    if (challenge) { setLastChallengeSeed(challenge.seed); setConfig(challenge); setScreen('draft') }
+    if (challenge) {
+      setLastChallengeSeed(challenge.seed)
+      setCompetition(challenge.competition)
+      setConfig(challenge)
+      setScreen('draft')
+    }
   }, [])
 
   function handleSelectCompetition(comp) {
@@ -235,6 +242,7 @@ export default function App() {
         <ChallengesScreen
           onBack={() => setScreen('setup')}
           onViewResults={seed => handleLeaderboard(seed, null)}
+          competition={competition}
         />
       )}
       {screen === 'group' && (

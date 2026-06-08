@@ -43,12 +43,13 @@ function buildSquadUrl(slots, formation, mode) {
   return `${window.location.href.split('#')[0]}#s=${encodeSquad(slots, formation, mode)}`
 }
 
-function buildChallengeUrl(formation, seed, score, name) {
+function buildChallengeUrl(formation, seed, score, name, competition) {
   const base = `${window.location.href.split('#')[0]}#c=${formation}|${seed}`
-  // Embed the challenger's score (+ name) so the opponent's result is a direct
-  // win/loss. Older links without these still work (no win judged).
+  // Embed the challenger's score (+ name + competition) so the opponent plays the
+  // right mode and their result is a direct win/loss. Older links without these
+  // still work (no win judged, default World Cup).
   if (score == null) return base
-  return `${base}|${score}|${encodeURIComponent(name || '')}`
+  return `${base}|${score}|${encodeURIComponent(name || '')}|${competition === 'pl' ? 'pl' : 'wc'}`
 }
 
 function fireConfetti(score) {
@@ -100,7 +101,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
   useEffect(() => {
     if (!isChallenge || challengeRecorded.current) return
     challengeRecorded.current = true
-    setChallengeStreak(recordChallengeResult(won))
+    setChallengeStreak(recordChallengeResult(won, competition))
   }, [])
 
   async function doSubmit(playerName) {
@@ -116,7 +117,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
       streak: streak || null,
       // The recording effect runs first and persists the new streak, so read it
       // straight from localStorage rather than racing React state.
-      challengeStreak: isChallenge ? getChallengeStreak().streak : null,
+      challengeStreak: isChallenge ? getChallengeStreak(competition).streak : null,
     })
   }
 
@@ -181,7 +182,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
   }
 
   function handleChallenge() {
-    const url = buildChallengeUrl(formation, seed, score, getSavedName())
+    const url = buildChallengeUrl(formation, seed, score, getSavedName(), competition)
     navigator.clipboard.writeText(url).then(() => {
       setChallengeCopied(true); setTimeout(() => setChallengeCopied(false), 2500)
     })
@@ -250,7 +251,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
               </div>
               <div className="text-xs text-gray-400 mt-1">
                 {won ? (
-                  <>Challenge win streak: <span className="text-orange-400 font-bold">{(challengeStreak?.streak ?? getChallengeStreak().streak)} 🔥</span></>
+                  <>Challenge win streak: <span className="text-orange-400 font-bold">{(challengeStreak?.streak ?? getChallengeStreak(competition).streak)} 🔥</span></>
                 ) : (
                   <>Win streak reset to 0</>
                 )}

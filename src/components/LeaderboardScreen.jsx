@@ -128,13 +128,13 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
     setLoading(true)
     setError(null)
     Promise.all([
-      fetchTopStreaks({ limit: 25, column: 'challenge_streak' }),
-      fetchTopStreaks({ limit: 25, column: 'streak' }),
+      fetchTopStreaks({ limit: 25, column: 'challenge_streak', competition: comp }),
+      fetchTopStreaks({ limit: 25, column: 'streak', competition: comp }),
     ])
       .then(([wins, daily]) => { setStreaks(wins); setDailyStreaks(daily) })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [board])
+  }, [board, comp])
 
   // Attach goals from the simulated run, then rank by score → goal difference.
   const ranked = useMemo(() => {
@@ -174,7 +174,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
       </div>
 
       {/* Competition board — World Cup vs Premier League (separate boards) */}
-      {isConfigured && showCompToggle && board === 'scores' && (
+      {isConfigured && showCompToggle && (
         <div className="flex gap-2 mb-4">
           {[['wc', '🌍 World Cup'], ['pl', '🦁 Premier League']].map(([id, label]) => (
             <button
@@ -285,20 +285,23 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
             <div className="space-y-8">
               <StreakTable
                 title="🤝 Challenge Win Streaks"
-                subtitle="Longest run of challenge wins"
+                subtitle={`Longest run of ${isPL ? 'Premier League' : 'World Cup'} challenge wins`}
                 rows={streaks}
                 valueKey="challenge_streak"
                 myName={myName}
                 emptyMsg="No challenge wins yet — be the first!"
               />
-              <StreakTable
-                title="⭐ Daily Challenge Streaks"
-                subtitle="Most days played in a row"
-                rows={dailyStreaks}
-                valueKey="streak"
-                myName={myName}
-                emptyMsg="No daily streaks yet — play today's challenge!"
-              />
+              {/* Daily challenge is World Cup only — no daily-streak board for PL */}
+              {!isPL && (
+                <StreakTable
+                  title="⭐ Daily Challenge Streaks"
+                  subtitle="Most days played in a row"
+                  rows={dailyStreaks}
+                  valueKey="streak"
+                  myName={myName}
+                  emptyMsg="No daily streaks yet — play today's challenge!"
+                />
+              )}
             </div>
           )}
 

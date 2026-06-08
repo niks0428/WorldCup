@@ -61,10 +61,11 @@ export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', 
 // Highest streaks for a given column ('challenge_streak' = head-to-head wins,
 // 'streak' = daily-challenge day streak). Supabase REST can't group-by per
 // player, so we pull the top rows and keep each player's best client-side.
-export async function fetchTopStreaks({ limit = 20, column = 'challenge_streak' } = {}) {
+export async function fetchTopStreaks({ limit = 20, column = 'challenge_streak', competition = 'wc' } = {}) {
   const params = new URLSearchParams()
   params.set('select', `player_name,${column},created_at`)
   params.set(column, 'gt.0')
+  params.set('competition', `eq.${competition === 'pl' ? 'pl' : 'wc'}`)
   params.set('order', `${column}.desc,created_at.asc`)
   params.set('limit', '200')
 
