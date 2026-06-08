@@ -6,13 +6,31 @@ import { simulateTournament } from '../utils/tournament'
 // Reproduce the tournament run for a leaderboard row using the same inputs the
 // player saw (squad names + seed + score + tier), so goals match exactly.
 function runForRow(s) {
-  let slots = []
-  const hash = s.squad_url ? s.squad_url.split('#')[1] || '' : ''
-  if (hash.startsWith('s=')) {
-    const data = decodeSquad(hash.slice(2))
-    if (data?.s) slots = data.s.map(p => ({ player: { name: p.n } }))
+  try {
+    let slots = []
+    const hash = s.squad_url ? s.squad_url.split('#')[1] || '' : ''
+    if (hash.startsWith('s=')) {
+      const data = decodeSquad(hash.slice(2))
+      if (Array.isArray(data?.s)) slots = data.s.map(p => ({ player: { name: p?.n } }))
+    }
+    return simulateTournament(slots, s.score, { label: s.tier }, s.seed)
+  } catch {
+    // Never let one malformed/hostile row break the whole leaderboard render.
+    return { goalsFor: 0, goalsAgainst: 0 }
   }
-  return simulateTournament(slots, s.score, { label: s.tier }, s.seed)
+}
+
+// Only allow http(s) links from leaderboard rows. squad_url comes from a public,
+// unauthenticated Supabase insert, so a malicious row could carry a
+// `javascript:` (or `data:`) URL — rendering that in an href would be stored XSS.
+function safeHttpUrl(url) {
+  if (typeof url !== 'string') return null
+  try {
+    const u = new URL(url, window.location.origin)
+    return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null
+  } catch {
+    return null
+  }
 }
 
 const MODE_LABEL = { classic: 'Classic', expert: 'Expert', hardcore: '💀', daily: '⭐ Daily' }
@@ -180,8 +198,8 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-yellow-400 font-extrabold text-lg">{s.score}</div>
-                    {s.squad_url && (
-                      <a href={s.squad_url} target="_blank" rel="noopener noreferrer"
+                    {safeHttpUrl(s.squad_url) && (
+                      <a href={safeHttpUrl(s.squad_url)} target="_blank" rel="noopener noreferrer"
                         className="text-gray-500 hover:text-gray-300 text-[10px] transition-colors">
                         View →
                       </a>

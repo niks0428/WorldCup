@@ -12,10 +12,6 @@ function headers() {
   }
 }
 
-function reprHeaders() {
-  return { ...headers(), Prefer: 'return=representation' }
-}
-
 // ── Scores ────────────────────────────────────────────────────────────────────
 
 export async function submitScore({ playerName, score, tier, formation, mode, squadUrl, seed, challengeDate, groupCode, streak }) {
@@ -66,22 +62,39 @@ function randomCode() {
 
 export async function createGroup(name) {
   const code = randomCode()
+  // return=minimal: we don't read the row back, so this keeps working even after
+  // direct SELECT on `groups` is revoked (strict-privacy hardening). The client
+  // already knows the code it generated.
   const res = await fetch(`${SUPABASE_URL}/rest/v1/groups`, {
     method: 'POST',
-    headers: reprHeaders(),
+    headers: headers(),
     body: JSON.stringify({ name, code }),
   })
   if (!res.ok) throw new Error(`Create group failed: ${res.status}`)
-  const [data] = await res.json()
-  return data
+  return { name, code }
 }
 
 export async function getGroup(code) {
-  const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/groups?code=eq.${code.toUpperCase()}&select=*`,
-    { headers: headers() }
-  )
-  if (!res.ok) throw new Error('Failed to fetch group')
-  const data = await res.json()
-  return data[0] || null
+  const upper = code.toUpperCase()
+  // Preferred path: a SECURITY DEFINER function returning exactly one group by
+  // exact code, so the `groups` table can be locked against full enumeration.
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_group`, {
+    method: 'POST', headers: headers(), body: JSON.stringify({ p_code: upper }),
+  })
+  if (res.ok) {
+    const data = await res.json()
+    return (Array.isArray(data) ? data[0] : data) || null
+  }
+  // Fallback for before supabase_hardening.sql is applied (function 404s): use
+  // the legacy table lookup so group-join keeps working at deploy time.
+  if (res.status === 404) {
+    const legacy = await fetch(
+      `${SUPABASE_URL}/rest/v1/groups?code=eq.${upper}&select=*`,
+      { headers: headers() }
+    )
+    if (!legacy.ok) throw new Error('Failed to fetch group')
+    const data = await legacy.json()
+    return data[0] || null
+  }
+  throw new Error('Failed to fetch group')
 }
