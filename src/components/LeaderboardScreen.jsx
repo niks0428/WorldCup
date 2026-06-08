@@ -55,6 +55,18 @@ const MODE_TABS = [
   { id: 'expert',   label: 'Expert' },
   { id: 'hardcore', label: '💀' },
 ]
+const SORT_TABS = [
+  { id: 'placement', label: 'Placement' },
+  { id: 'rating',    label: 'Rating' },
+  { id: 'gd',        label: 'Goal Diff' },
+]
+
+// The chosen sort field's value for a row (higher = better).
+function primaryVal(s, sortBy) {
+  if (sortBy === 'rating') return s.score
+  if (sortBy === 'gd') return s._gd
+  return TIER_RANK[s.tier] || 0 // placement
+}
 
 export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) {
   const [scores, setScores] = useState([])
@@ -62,6 +74,8 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
   const [error, setError] = useState(null)
   const [timeFilter, setTimeFilter] = useState('alltime')
   const [modeFilter, setModeFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('placement')
+  const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => {
     if (!isConfigured) { setLoading(false); return }
@@ -85,21 +99,23 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
         const run = runForRow(s)
         return { ...s, _gf: run.goalsFor, _ga: run.goalsAgainst, _gd: run.goalsFor - run.goalsAgainst }
       })
-      // Rank by how far the team got (winners first), then team rating, then
-      // goal difference, then who got there first.
-      .sort((a, b) =>
-        (TIER_RANK[b.tier] || 0) - (TIER_RANK[a.tier] || 0) ||
-        b.score - a.score ||
-        b._gd - a._gd ||
-        new Date(a.created_at) - new Date(b.created_at)
-      )
+      // Sort by the chosen field + direction, then a stable best-first chain
+      // (placement → rating → goal difference → earliest) to break ties.
+      .sort((a, b) => {
+        const diff = primaryVal(b, sortBy) - primaryVal(a, sortBy)
+        if (diff) return sortDir === 'asc' ? -diff : diff
+        return (TIER_RANK[b.tier] || 0) - (TIER_RANK[a.tier] || 0) ||
+          b.score - a.score ||
+          b._gd - a._gd ||
+          new Date(a.created_at) - new Date(b.created_at)
+      })
     // Flag rows split from a same-tier, same-rating neighbour by goal difference.
     const sameBucket = (x, y) => x && y && x.tier === y.tier && x.score === y.score
     return list.map((s, i) => ({
       ...s,
       _tiebreak: sameBucket(list[i - 1], s) || sameBucket(list[i + 1], s),
     }))
-  }, [scores])
+  }, [scores, sortBy, sortDir])
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-950 px-4 py-8 max-w-lg mx-auto">
@@ -153,6 +169,27 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
               ))}
             </div>
           )}
+
+          {/* Sort field + direction */}
+          <div className="flex gap-2 mb-2">
+            {SORT_TABS.map(t => (
+              <button
+                key={t.id}
+                onClick={() => setSortBy(t.id)}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                  sortBy === t.id ? 'bg-yellow-400 text-gray-900' : 'bg-gray-800 text-gray-500 hover:text-white'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setSortDir(d => (d === 'desc' ? 'asc' : 'desc'))}
+            className="w-full mb-4 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-300 hover:text-white transition-colors"
+          >
+            {sortDir === 'desc' ? '↓ Highest to lowest' : '↑ Lowest to highest'}
+          </button>
 
           {loading && <div className="text-center text-gray-500 py-16">Loading…</div>}
           {error && <div className="text-center text-red-400 py-16 text-sm">{error}</div>}
