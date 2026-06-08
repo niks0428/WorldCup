@@ -16,28 +16,29 @@ export const LEAGUE_TIER_META = {
   'Relegated':         { label: 'Relegated',             emoji: '🔻', desc: 'Down to the Championship.' },
 }
 
-// 19 opponent season identities — name + base strength. Strengths span a
-// realistic PL spread (title contenders down to relegation fodder).
+// Your 19 opponents — the current Premier League clubs (2025/26, the closest
+// knowable lineup to 2026/27). You're the 20th team. Strengths span a realistic
+// PL spread (title contenders 83 → newly-promoted 65) so the balance holds.
 const OPPONENTS = [
-  { name: 'Manchester City',   str: 83 },
+  { name: 'Liverpool',         str: 83 },
   { name: 'Arsenal',           str: 82 },
-  { name: 'Liverpool',         str: 81 },
+  { name: 'Manchester City',   str: 81 },
   { name: 'Chelsea',           str: 80 },
-  { name: 'Tottenham Hotspur', str: 79 },
-  { name: 'Manchester United', str: 78 },
-  { name: 'Newcastle United',  str: 77 },
-  { name: 'Aston Villa',       str: 76 },
+  { name: 'Newcastle United',  str: 79 },
+  { name: 'Aston Villa',       str: 78 },
+  { name: 'Tottenham Hotspur', str: 77 },
+  { name: 'Manchester United', str: 76 },
   { name: 'Brighton',          str: 75 },
-  { name: 'West Ham United',   str: 74 },
+  { name: 'Bournemouth',       str: 74 },
   { name: 'Crystal Palace',    str: 73 },
   { name: 'Brentford',         str: 72 },
   { name: 'Fulham',            str: 71 },
-  { name: 'Wolves',            str: 70 },
-  { name: 'Everton',           str: 69 },
+  { name: 'Everton',           str: 70 },
+  { name: 'Wolves',            str: 69 },
   { name: 'Nottingham Forest', str: 68 },
-  { name: 'Bournemouth',       str: 67 },
-  { name: 'Leicester City',    str: 66 },
-  { name: 'Southampton',       str: 65 },
+  { name: 'West Ham United',   str: 67 },
+  { name: 'Leeds United',      str: 66 },
+  { name: 'Sunderland',        str: 65 },
 ]
 
 function shuffle(arr, rng) {
