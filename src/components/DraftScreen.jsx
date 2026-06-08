@@ -433,7 +433,7 @@ export default function DraftScreen({ config, onComplete }) {
   return (
     <div className="flex flex-col lg:flex-row min-h-screen">
       {/* Sidebar */}
-      <div className="lg:w-80 xl:w-96 bg-gray-900 flex flex-col p-4 gap-4">
+      <div className="order-2 lg:order-1 lg:w-80 xl:w-96 bg-gray-900 flex flex-col p-4 gap-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-extrabold text-white">🏆 Lift the Trophy</h1>
           <div className="flex items-center gap-2">
@@ -581,7 +581,7 @@ export default function DraftScreen({ config, onComplete }) {
       </div>
 
       {/* Pitch */}
-      <div className="flex-1 flex items-center justify-center p-4 bg-gray-950">
+      <div className="order-1 lg:order-2 sticky top-0 z-20 self-start w-full h-[44vh] lg:h-auto lg:static lg:self-auto lg:flex-1 flex items-center justify-center p-3 lg:p-4 bg-gray-950">
         <PitchView
           slots={slots}
           phase={phase}

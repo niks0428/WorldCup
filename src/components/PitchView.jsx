@@ -3,9 +3,8 @@ import { FlagImg } from '../lib/flags'
 export default function PitchView({ slots, phase, compatibleSlotIds = [], swapSlotIds = [], assignedSlotId, onPlacePlayer, onClearSlot, onSwap, canClear }) {
   return (
     <div
-      className="relative w-full rounded-2xl overflow-hidden"
+      className="relative rounded-2xl overflow-hidden h-full w-auto max-w-full lg:h-auto lg:w-full lg:max-w-[480px]"
       style={{
-        maxWidth: 480,
         aspectRatio: '2/3',
         background: 'linear-gradient(180deg, #166534 0%, #15803d 40%, #16a34a 60%, #15803d 100%)',
         boxShadow: '0 0 60px rgba(0,0,0,0.5)',
