@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { fetchScores, isConfigured } from '../lib/supabase'
+import { fetchScores, fetchTopStreaks, isConfigured } from '../lib/supabase'
 import { decodeSquad } from './ResultScreen'
 import { simulateTournament } from '../utils/tournament'
 
@@ -72,6 +72,8 @@ function primaryVal(s, sortBy) {
   return TIER_RANK[s.tier] || 0 // placement
 }
 
+function getSavedName() { try { return localStorage.getItem('ltt_player_name') || '' } catch { return '' } }
+
 export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) {
   const [scores, setScores] = useState([])
   const [loading, setLoading] = useState(true)
@@ -80,9 +82,15 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
   const [modeFilter, setModeFilter] = useState('all')
   const [sortBy, setSortBy] = useState('placement')
   const [sortDir, setSortDir] = useState('desc')
+  // Scores vs. challenge win-streak board. Streaks are global only — a specific
+  // challenge or group view stays on its scores list.
+  const [board, setBoard] = useState('scores')
+  const [streaks, setStreaks] = useState([])
+  const showStreakToggle = !challengeSeed && !groupCode
+  const myName = getSavedName()
 
   useEffect(() => {
-    if (!isConfigured) { setLoading(false); return }
+    if (!isConfigured || board !== 'scores') return
     setLoading(true)
     setError(null)
     fetchScores({
@@ -94,7 +102,17 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
       .then(setScores)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [modeFilter, timeFilter, challengeSeed, groupCode])
+  }, [modeFilter, timeFilter, challengeSeed, groupCode, board])
+
+  useEffect(() => {
+    if (!isConfigured || board !== 'streaks') return
+    setLoading(true)
+    setError(null)
+    fetchTopStreaks({ limit: 25 })
+      .then(setStreaks)
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [board])
 
   // Attach goals from the simulated run, then rank by score → goal difference.
   const ranked = useMemo(() => {
@@ -126,9 +144,29 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
       <div className="flex items-center gap-4 mb-6">
         <button onClick={onBack} className="text-gray-400 hover:text-white transition-colors text-sm">← Back</button>
         <h1 className="text-2xl font-extrabold text-white">
-          {groupCode ? '👥 Group Leaderboard' : challengeSeed ? '🤝 Challenge Results' : '🏅 Leaderboard'}
+          {groupCode ? '👥 Group Leaderboard'
+            : challengeSeed ? '🤝 Challenge Results'
+            : board === 'streaks' ? '🔥 Win Streaks'
+            : '🏅 Leaderboard'}
         </h1>
       </div>
+
+      {/* Scores vs. win-streak board */}
+      {isConfigured && showStreakToggle && (
+        <div className="flex gap-2 mb-4">
+          {[['scores', '🏅 Scores'], ['streaks', '🔥 Win Streaks']].map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setBoard(id)}
+              className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
+                board === id ? 'bg-yellow-400 text-gray-900' : 'bg-gray-800 text-gray-400 hover:text-white'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!isConfigured && (
         <div className="bg-gray-800 rounded-2xl p-6 text-center space-y-3">
@@ -141,7 +179,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
       {isConfigured && (
         <>
           {/* Time filter */}
-          {!challengeSeed && (
+          {board === 'scores' && !challengeSeed && (
             <div className="flex gap-2 mb-3">
               {TIME_TABS.map(t => (
                 <button
@@ -158,7 +196,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
           )}
 
           {/* Mode filter — hide for daily (only one mode) */}
-          {timeFilter !== 'daily' && !challengeSeed && (
+          {board === 'scores' && timeFilter !== 'daily' && !challengeSeed && (
             <div className="flex gap-2 mb-4">
               {MODE_TABS.map(m => (
                 <button
@@ -175,35 +213,77 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
           )}
 
           {/* Sort field + direction */}
-          <div className="grid grid-cols-3 gap-2 mb-2">
-            {SORT_TABS.map(t => (
+          {board === 'scores' && (
+            <>
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {SORT_TABS.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSortBy(t.id)}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                      sortBy === t.id ? 'bg-yellow-400 text-gray-900' : 'bg-gray-800 text-gray-500 hover:text-white'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
               <button
-                key={t.id}
-                onClick={() => setSortBy(t.id)}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-                  sortBy === t.id ? 'bg-yellow-400 text-gray-900' : 'bg-gray-800 text-gray-500 hover:text-white'
-                }`}
+                onClick={() => setSortDir(d => (d === 'desc' ? 'asc' : 'desc'))}
+                className="w-full mb-4 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-300 hover:text-white transition-colors"
               >
-                {t.label}
+                {sortDir === 'desc' ? '↓ Highest to lowest' : '↑ Lowest to highest'}
               </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setSortDir(d => (d === 'desc' ? 'asc' : 'desc'))}
-            className="w-full mb-4 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-300 hover:text-white transition-colors"
-          >
-            {sortDir === 'desc' ? '↓ Highest to lowest' : '↑ Lowest to highest'}
-          </button>
+            </>
+          )}
 
           {loading && <div className="text-center text-gray-500 py-16">Loading…</div>}
           {error && <div className="text-center text-red-400 py-16 text-sm">{error}</div>}
-          {!loading && !error && scores.length === 0 && (
+
+          {board === 'streaks' && !loading && !error && (
+            streaks.length === 0 ? (
+              <div className="text-center text-gray-500 py-16">No challenge wins yet — be the first!</div>
+            ) : (
+              <div className="space-y-2">
+                {streaks.map((s, i) => {
+                  const isMe = myName && s.player_name === myName
+                  return (
+                    <div
+                      key={`${s.player_name}-${i}`}
+                      className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
+                        isMe ? 'bg-orange-400/10 border border-orange-400/40' :
+                        i === 0 ? 'bg-yellow-400/10 border border-yellow-400/30' :
+                        i === 1 ? 'bg-gray-400/5 border border-gray-400/15' :
+                        i === 2 ? 'bg-orange-400/5 border border-orange-400/15' :
+                        'bg-gray-800'
+                      }`}
+                    >
+                      <span className="text-lg w-7 text-center shrink-0">
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (
+                          <span className="text-gray-500 text-sm font-bold">{i + 1}</span>
+                        )}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-white font-bold text-sm truncate">
+                          {s.player_name}{isMe && <span className="text-orange-400 text-xs font-normal"> (you)</span>}
+                        </div>
+                        <div className="text-gray-400 text-xs">Longest challenge win streak</div>
+                      </div>
+                      <div className="text-orange-400 font-extrabold text-lg shrink-0">{s.challenge_streak} 🔥</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          )}
+
+          {board === 'scores' && !loading && !error && scores.length === 0 && (
             <div className="text-center text-gray-500 py-16">
               {timeFilter === 'daily' ? "No daily scores yet — play today's challenge!" : 'No scores yet — be the first!'}
             </div>
           )}
 
-          {!loading && !error && ranked.length > 0 && (
+          {board === 'scores' && !loading && !error && ranked.length > 0 && (
             <div className="space-y-2">
               {ranked.map((s, i) => (
                 <div
