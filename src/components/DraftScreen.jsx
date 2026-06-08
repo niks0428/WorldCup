@@ -229,6 +229,7 @@ function LiveBreakdown({ slots, filledCount }) {
 
 export default function DraftScreen({ config, onComplete }) {
   const isHardcore = config.mode === 'hardcore'
+  const isClassic = config.mode === 'classic'
   const formationDef = formations[config.formation]
   const initialSlots = formationDef.slots.map(s => ({ ...s, player: null }))
 
@@ -288,7 +289,13 @@ export default function DraftScreen({ config, onComplete }) {
       available = compatible.length > 0 ? compatible : pool
     } else {
       const empties = getEmptySlots()
-      available = pool.filter(p => empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.85))
+      available = pool.filter(p =>
+        empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.85) ||
+        // Classic: also offer players who fit a taken slot whose occupant can move.
+        (isClassic && slots.some(s => s.player
+          && getFitMultiplier(s.position, p.positions) >= 0.85
+          && relocationSlotFor(s.player, s.id))),
+      )
     }
 
     const blindMode = isHardcore || config.mode === 'expert'
@@ -342,6 +349,38 @@ export default function DraftScreen({ config, onComplete }) {
     setPhase('idle')
   }
 
+  // Best empty slot an existing player could move to (Classic swap feature).
+  function relocationSlotFor(player, excludeId, currentSlots = slots) {
+    return currentSlots
+      .filter(s => !s.player && s.id !== excludeId && getFitMultiplier(s.position, player.positions) >= 0.85)
+      .sort((a, b) => getFitMultiplier(b.position, player.positions) - getFitMultiplier(a.position, player.positions))[0] || null
+  }
+
+  // Classic only: place the spun player into an already-filled slot, moving the
+  // current occupant to another position they can play. Consumes the spin like a
+  // normal placement (no free re-roll).
+  function swapIntoSlot(slotId) {
+    if (phase !== 'placing' || !selectedPlayer || !isClassic) return
+    const target = slots.find(s => s.id === slotId)
+    if (!target || !target.player) return
+    if (getFitMultiplier(target.position, selectedPlayer.positions) < 0.85) return
+    const dest = relocationSlotFor(target.player, target.id)
+    if (!dest) return
+    playPlace()
+    const occupant = target.player
+    const nextSlots = slots.map(s => {
+      if (s.id === target.id) return { ...s, player: selectedPlayer }
+      if (s.id === dest.id) return { ...s, player: occupant }
+      return s
+    })
+    setSlots(nextSlots)
+    setSpinIndex(i => i + 1)
+    setCurrentPair(null)
+    setSquad([])
+    setSelectedPlayer(null)
+    setPhase('idle')
+  }
+
   // Undo: clear a filled slot during idle phase. Removing a player to spin
   // again is a re-roll, so it costs a skip — otherwise you could place, remove,
   // and re-spin indefinitely, bypassing the skip limit. No undo in hardcore.
@@ -375,6 +414,15 @@ export default function DraftScreen({ config, onComplete }) {
 
   const compatibleSlotIds = selectedPlayer
     ? slots.filter(s => !s.player && getFitMultiplier(s.position, selectedPlayer.positions) >= 0.85).map(s => s.id)
+    : []
+
+  // Filled slots the spun player can take, where the current occupant can move
+  // to another position they play (Classic mode only).
+  const swapSlotIds = (isClassic && phase === 'placing' && selectedPlayer)
+    ? slots.filter(s => s.player
+        && getFitMultiplier(s.position, selectedPlayer.positions) >= 0.85
+        && relocationSlotFor(s.player, s.id)
+      ).map(s => s.id)
     : []
 
   const accentCls = isHardcore ? 'border-red-500 bg-red-500/10' : 'border-yellow-400 bg-yellow-400/10'
@@ -542,6 +590,8 @@ export default function DraftScreen({ config, onComplete }) {
           onPlacePlayer={placePlayer}
           onClearSlot={clearSlot}
           canClear={phase === 'idle' && !isHardcore && skipsLeft > 0}
+          swapSlotIds={swapSlotIds}
+          onSwap={swapIntoSlot}
         />
       </div>
     </div>

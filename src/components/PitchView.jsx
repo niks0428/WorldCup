@@ -1,6 +1,6 @@
 import { FlagImg } from '../lib/flags'
 
-export default function PitchView({ slots, phase, compatibleSlotIds = [], assignedSlotId, onPlacePlayer, onClearSlot, canClear }) {
+export default function PitchView({ slots, phase, compatibleSlotIds = [], swapSlotIds = [], assignedSlotId, onPlacePlayer, onClearSlot, onSwap, canClear }) {
   return (
     <div
       className="relative w-full rounded-2xl overflow-hidden"
@@ -29,6 +29,8 @@ export default function PitchView({ slots, phase, compatibleSlotIds = [], assign
           assigned={assignedSlotId === slot.id}
           onPlace={onPlacePlayer}
           onClear={onClearSlot}
+          onSwap={onSwap}
+          swapTarget={phase === 'placing' && swapSlotIds.includes(slot.id)}
           canClear={canClear}
         />
       ))}
@@ -36,7 +38,7 @@ export default function PitchView({ slots, phase, compatibleSlotIds = [], assign
   )
 }
 
-function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, canClear }) {
+function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, onSwap, swapTarget, canClear }) {
   const left = `${slot.x}%`
   const top = `${slot.y}%`
   const isPlacing = phase === 'placing'
@@ -83,17 +85,32 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, canCl
     )
   }
 
+  const isSwap = isPlacing && swapTarget
+  const dimmedFilled = isPlacing && !swapTarget   // non-target slots fade during placing
+  const clickable = isSwap || canClear
+
   return (
     <button
-      onClick={() => canClear && onClear?.(slot.id)}
-      disabled={!canClear}
+      onClick={() => (isSwap ? onSwap?.(slot.id) : canClear && onClear?.(slot.id))}
+      disabled={!clickable}
       className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 group"
-      style={{ left, top, cursor: canClear ? 'pointer' : 'default' }}
-      title={canClear ? 'Remove (uses a skip)' : undefined}
+      style={{ left, top, cursor: clickable ? 'pointer' : 'default' }}
+      title={isSwap ? 'Swap in — moves this player to another position they play' : canClear ? 'Remove (uses a skip)' : undefined}
     >
-      <div className={`relative w-11 h-11 rounded-full overflow-hidden border-2 shadow-lg bg-gray-800 transition-all ${canClear ? 'border-white group-hover:border-red-400 group-hover:scale-105' : 'border-white'}`}>
+      <div className={`relative w-11 h-11 rounded-full overflow-hidden border-2 shadow-lg bg-gray-800 transition-all ${
+        isSwap
+          ? 'border-cyan-400 ring-2 ring-cyan-400/60 scale-110 animate-pulse'
+          : dimmedFilled
+            ? 'border-white/40 opacity-40'
+            : canClear
+              ? 'border-white group-hover:border-red-400 group-hover:scale-105'
+              : 'border-white'
+      }`}>
         <FlagImg nation={slot.player.nation} className="w-full h-full object-cover" />
-        {canClear && (
+        {isSwap && (
+          <span className="absolute inset-0 flex items-center justify-center bg-cyan-500/40 text-white text-base font-bold">⇄</span>
+        )}
+        {canClear && !isSwap && (
           <span className="absolute inset-0 hidden group-hover:flex items-center justify-center bg-red-500/70 text-white text-base font-bold">✕</span>
         )}
       </div>
@@ -103,6 +120,11 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, canCl
         </div>
         <div className="text-yellow-400 text-[10px] font-bold">{slot.player.overall}</div>
       </div>
+      {isSwap && (
+        <div className="bg-cyan-400 rounded px-1.5 py-0.5 shadow-md">
+          <span className="text-gray-900 text-[8px] font-extrabold uppercase tracking-wider">Swap in</span>
+        </div>
+      )}
     </button>
   )
 }
