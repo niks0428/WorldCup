@@ -4,6 +4,7 @@ import { todaySeed } from '../lib/seededRandom'
 import { isDailyDoneToday, timeUntilNextDaily } from '../lib/daily'
 import { isMuted, toggleMuted } from '../lib/sound'
 import Logo from './Logo'
+import formationsData from '../data/formations.json'
 
 const FORMATIONS = [
   '4-3-3', '4-3-3 (2)', '4-3-3 (4)',
@@ -14,6 +15,50 @@ const FORMATIONS = [
   '3-5-2', '3-4-3', '3-4-1-2', '3-4-2-1',
   '5-3-2', '5-2-1-2', '5-2-3', '5-4-1',
 ]
+// Most-used shapes shown by default; the rest are revealed via "Show all"
+const POPULAR_FORMATIONS = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2', '3-4-3']
+
+const GROUP_COLORS = {
+  GK:  '#facc15', // yellow
+  DEF: '#38bdf8', // sky
+  MID: '#4ade80', // green
+  ATT: '#f87171', // red
+}
+
+// Mini pitch that plots the selected formation's slots as coloured dots
+function FormationPreview({ formation }) {
+  const slots = formationsData[formation]?.slots || []
+  return (
+    <div
+      className="relative w-full max-w-[240px] mx-auto rounded-xl overflow-hidden border border-gray-700"
+      style={{
+        aspectRatio: '2/3',
+        background: 'linear-gradient(180deg, #166534 0%, #15803d 50%, #166534 100%)',
+      }}
+    >
+      <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 150" preserveAspectRatio="none">
+        <rect x="5" y="5" width="90" height="140" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+        <line x1="5" y1="75" x2="95" y2="75" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+        <circle cx="50" cy="75" r="10" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.8" />
+        <rect x="30" y="5" width="40" height="15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+        <rect x="30" y="130" width="40" height="15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" />
+      </svg>
+      {slots.map(s => (
+        <div
+          key={s.id}
+          className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+          style={{ left: `${s.x}%`, top: `${s.y}%` }}
+        >
+          <span
+            className="rounded-full border border-black/30 shadow"
+            style={{ width: 14, height: 14, backgroundColor: GROUP_COLORS[s.group] || '#fff' }}
+          />
+          <span className="mt-0.5 text-[8px] font-bold text-white/90 leading-none drop-shadow">{s.position}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
 const MODES = [
   { id: 'classic',  label: 'Classic',  badge: null, desc: 'Full squad, stats visible. Pick your slot. 3 skips.' },
   { id: 'expert',   label: 'Expert',   badge: null, desc: 'Position-compatible players only, no stats. 3 skips.' },
@@ -23,6 +68,7 @@ const MODES = [
 export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, streak, currentGroup }) {
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
+  const [showAllFormations, setShowAllFormations] = useState(false)
   const [dailyDone] = useState(() => isDailyDoneToday())
   const [countdown, setCountdown] = useState(() => timeUntilNextDaily().label)
   const [muted, setMuted] = useState(() => isMuted())
@@ -129,7 +175,13 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2">Formation</h2>
           <div className="grid grid-cols-3 gap-2">
-            {FORMATIONS.map(f => (
+            {(showAllFormations
+              ? FORMATIONS
+              // collapsed: show popular shapes, plus the selected one if it isn't popular
+              : POPULAR_FORMATIONS.includes(formation)
+                ? POPULAR_FORMATIONS
+                : [...POPULAR_FORMATIONS, formation]
+            ).map(f => (
               <button
                 key={f}
                 onClick={() => setFormation(f)}
@@ -140,6 +192,17 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
                 {f}
               </button>
             ))}
+          </div>
+          <button
+            onClick={() => setShowAllFormations(v => !v)}
+            className="mt-2 w-full py-1.5 text-xs font-semibold uppercase tracking-widest text-gray-500 hover:text-yellow-300 transition-colors"
+          >
+            {showAllFormations ? '− Show fewer' : `+ Show all ${FORMATIONS.length}`}
+          </button>
+
+          {/* Live preview of the selected formation */}
+          <div className="mt-3">
+            <FormationPreview formation={formation} />
           </div>
         </div>
 
