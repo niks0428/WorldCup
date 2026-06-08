@@ -431,9 +431,9 @@ export default function DraftScreen({ config, onComplete }) {
     : 'bg-yellow-400 hover:bg-yellow-300 text-gray-900'
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen">
+    <div className="flex flex-col lg:flex-row min-h-screen lg:h-screen lg:overflow-hidden">
       {/* Sidebar */}
-      <div className="order-2 lg:order-1 lg:w-80 xl:w-96 bg-gray-900 flex flex-col p-4 gap-4">
+      <div className="order-2 lg:order-1 lg:w-80 xl:w-96 bg-gray-900 flex flex-col p-4 gap-4 lg:overflow-y-auto">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-extrabold text-white">🏆 Lift the Trophy</h1>
           <div className="flex items-center gap-2">
@@ -496,7 +496,7 @@ export default function DraftScreen({ config, onComplete }) {
 
         {/* Picking phase — squad list */}
         {phase === 'picking' && (
-          <div className="flex-1 overflow-y-auto space-y-2">
+          <div className="flex-1 overflow-y-auto lg:min-h-0 space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-widest text-gray-500">
                 {isHardcore ? `Pick for ${assignedSlot?.position}` : 'Pick a player'}
