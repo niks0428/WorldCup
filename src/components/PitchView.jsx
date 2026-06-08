@@ -1,6 +1,10 @@
 import { FlagImg } from '../lib/flags'
 
-export default function PitchView({ slots, phase, compatibleSlotIds = [], swapSlotIds = [], assignedSlotId, onPlacePlayer, onClearSlot, onSwap, canClear }) {
+export default function PitchView({
+  slots, phase, compatibleSlotIds = [], swapSlotIds = [], assignedSlotId,
+  onPlacePlayer, onSwap,
+  canMove = false, movingSlotId = null, moveTargetIds = [], swapMoveTargetIds = [], onSelectForMove, onMoveTo,
+}) {
   return (
     <div
       className="relative rounded-2xl overflow-hidden h-full w-auto max-w-full lg:h-auto lg:w-full lg:max-w-[480px]"
@@ -27,28 +31,40 @@ export default function PitchView({ slots, phase, compatibleSlotIds = [], swapSl
           compatible={compatibleSlotIds.includes(slot.id)}
           assigned={assignedSlotId === slot.id}
           onPlace={onPlacePlayer}
-          onClear={onClearSlot}
           onSwap={onSwap}
           swapTarget={phase === 'placing' && swapSlotIds.includes(slot.id)}
-          canClear={canClear}
+          canMove={canMove}
+          movingSlotId={movingSlotId}
+          moveTarget={moveTargetIds.includes(slot.id)}
+          swapMoveTarget={swapMoveTargetIds.includes(slot.id)}
+          onSelectForMove={onSelectForMove}
+          onMoveTo={onMoveTo}
         />
       ))}
     </div>
   )
 }
 
-function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, onSwap, swapTarget, canClear }) {
+function PlayerCard({
+  slot, phase, compatible, assigned, onPlace, onSwap, swapTarget,
+  canMove, movingSlotId, moveTarget, swapMoveTarget, onSelectForMove, onMoveTo,
+}) {
   const left = `${slot.x}%`
   const top = `${slot.y}%`
   const isPlacing = phase === 'placing'
+  const isIdle = phase === 'idle'
+  const moving = movingSlotId != null
 
   if (!slot.player) {
-    const clickable = isPlacing && compatible
-    const dimmed = isPlacing && !compatible
+    const placeable = isPlacing && compatible
+    const moveable = isIdle && moving && moveTarget
+    const clickable = placeable || moveable
+    const dimmed = (isPlacing && !compatible) || (isIdle && moving && !moveTarget)
+    const label = placeable ? 'Place here' : 'Move here'
 
     return (
       <button
-        onClick={() => clickable && onPlace?.(slot.id)}
+        onClick={() => { if (placeable) onPlace?.(slot.id); else if (moveable) onMoveTo?.(slot.id) }}
         disabled={!clickable}
         className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 transition-all duration-150"
         style={{ left, top, cursor: clickable ? 'pointer' : 'default' }}
@@ -72,7 +88,7 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, onSwa
         </div>
         {clickable && (
           <div className="bg-yellow-400 rounded px-1.5 py-0.5 shadow-md">
-            <span className="text-gray-900 text-[8px] font-extrabold uppercase tracking-wider">Place here</span>
+            <span className="text-gray-900 text-[8px] font-extrabold uppercase tracking-wider">{label}</span>
           </div>
         )}
         {assigned && !clickable && (
@@ -85,32 +101,53 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, onSwa
   }
 
   const isSwap = isPlacing && swapTarget
-  const dimmedFilled = isPlacing && !swapTarget   // non-target slots fade during placing
-  const clickable = isSwap || canClear
+  const isMovingSelf = isIdle && slot.id === movingSlotId
+  const selectableForMove = isIdle && canMove && !moving
+  // Another placed player the picked-up player can swap with (idle move).
+  const isSwapMoveTarget = isIdle && moving && !isMovingSelf && swapMoveTarget
+  const dimmedFilled = (isPlacing && !swapTarget) || (isIdle && moving && !isMovingSelf && !swapMoveTarget)
+  const clickable = isSwap || isMovingSelf || selectableForMove || isSwapMoveTarget
+
+  function handleClick() {
+    if (isSwap) onSwap?.(slot.id)
+    else if (isSwapMoveTarget) onMoveTo?.(slot.id)
+    else if (isMovingSelf || selectableForMove) onSelectForMove?.(slot.id)
+  }
 
   return (
     <button
-      onClick={() => (isSwap ? onSwap?.(slot.id) : canClear && onClear?.(slot.id))}
+      onClick={handleClick}
       disabled={!clickable}
       className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 group"
       style={{ left, top, cursor: clickable ? 'pointer' : 'default' }}
-      title={isSwap ? 'Swap in — moves this player to another position they play' : canClear ? 'Remove (uses a skip)' : undefined}
+      title={
+        isSwap ? 'Swap in — moves this player to another position they play'
+          : isSwapMoveTarget ? 'Tap to swap these two players'
+            : isMovingSelf ? 'Tap to cancel'
+              : selectableForMove ? 'Move to an open position (free)'
+                : undefined
+      }
     >
       <div className={`relative w-11 h-11 rounded-full overflow-hidden border-2 shadow-lg bg-gray-800 transition-all ${
-        isSwap
+        isSwap || isSwapMoveTarget
           ? 'border-cyan-400 ring-2 ring-cyan-400/60 scale-110 animate-pulse'
-          : dimmedFilled
-            ? 'border-white/40 opacity-40'
-            : canClear
-              ? 'border-white group-hover:border-red-400 group-hover:scale-105'
-              : 'border-white'
+          : isMovingSelf
+            ? 'border-yellow-400 ring-2 ring-yellow-400/60 scale-110 animate-pulse'
+            : dimmedFilled
+              ? 'border-white/40 opacity-40'
+              : selectableForMove
+                ? 'border-white group-hover:border-yellow-400 group-hover:scale-105'
+                : 'border-white'
       }`}>
         <FlagImg nation={slot.player.nation} className="w-full h-full object-cover" />
-        {isSwap && (
+        {(isSwap || isSwapMoveTarget) && (
           <span className="absolute inset-0 flex items-center justify-center bg-cyan-500/40 text-white text-base font-bold">⇄</span>
         )}
-        {canClear && !isSwap && (
-          <span className="absolute inset-0 hidden group-hover:flex items-center justify-center bg-red-500/70 text-white text-base font-bold">✕</span>
+        {isMovingSelf && (
+          <span className="absolute inset-0 flex items-center justify-center bg-yellow-500/40 text-white text-base font-bold">⤴</span>
+        )}
+        {selectableForMove && (
+          <span className="absolute inset-0 hidden group-hover:flex items-center justify-center bg-yellow-500/60 text-white text-base font-bold">⤴</span>
         )}
       </div>
       <div className="bg-black/70 rounded px-1.5 py-0.5 text-center max-w-[72px]">
@@ -119,9 +156,9 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, onSwa
         </div>
         <div className="text-yellow-400 text-[10px] font-bold">{slot.player.overall}</div>
       </div>
-      {isSwap && (
-        <div className="bg-cyan-400 rounded px-1.5 py-0.5 shadow-md">
-          <span className="text-gray-900 text-[8px] font-extrabold uppercase tracking-wider">Swap in</span>
+      {isMovingSelf && (
+        <div className="bg-yellow-400 rounded px-1.5 py-0.5 shadow-md">
+          <span className="text-gray-900 text-[8px] font-extrabold uppercase tracking-wider">Moving</span>
         </div>
       )}
     </button>

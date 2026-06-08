@@ -16,6 +16,7 @@ export function calculateTeamScore(draftedSlots) {
 
   for (const slot of draftedSlots) {
     if (!slot.player) continue
+    if (!groups[slot.group]) continue // ignore bench/SUB slots — XI only
     const mult = getFitMultiplier(slot.position, slot.player.positions)
     const weighted = slot.player.overall * mult
     groups[slot.group].push(weighted)
@@ -36,6 +37,7 @@ export function calculateGroupScores(draftedSlots) {
   const groups = { GK: [], DEF: [], MID: [], ATT: [] }
   for (const slot of draftedSlots) {
     if (!slot.player) continue
+    if (!groups[slot.group]) continue // ignore bench/SUB slots — XI only
     const mult = getFitMultiplier(slot.position, slot.player.positions)
     groups[slot.group].push(slot.player.overall * mult)
   }

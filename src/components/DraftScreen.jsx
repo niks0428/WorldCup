@@ -6,7 +6,7 @@ import wcOld from '../data/players_wc_old.json'
 import euroA from '../data/players_euro_a.json'
 import euroB from '../data/players_euro_b.json'
 import formations from '../data/formations.json'
-import { filterSquadForSlot, getFitMultiplier } from '../utils/compatibility'
+import { getFitMultiplier, getPlayablePositions } from '../utils/compatibility'
 import PitchView from './PitchView'
 import { FlagImg, FLAG_EMOJI } from '../lib/flags'
 import { playSpin, playTick, playPick, playPlace } from '../lib/sound'
@@ -42,6 +42,16 @@ function pickRandom(arr) {
 const ALL_PAIRS = buildPairs()
 const ITEM_H = 60
 const MAX_SKIPS = 3
+const SUB_COUNT = 5
+
+// A bench/SUB slot accepts any player; a pitch slot needs a compatible position.
+function isBench(slot) {
+  return slot.group === 'SUB'
+}
+function eligible(slot, player) {
+  if (!player) return false
+  return isBench(slot) ? true : getFitMultiplier(slot.position, player.positions) >= 0.85
+}
 
 function statColor(v) {
   if (v > 80) return 'text-green-400'
@@ -71,7 +81,7 @@ function PlayerPickCard({ player, fitLabel, fitCls, onClick, hideStats }) {
             <span className="font-semibold text-white text-sm truncate">{player.name}</span>
           </div>
           <div className="text-xs text-gray-400 mt-0.5">
-            {player.positions.join('/')}
+            {getPlayablePositions(player.positions).join('/')}
             {fitLabel && <span className={`ml-1 ${fitCls}`}>· {fitLabel}</span>}
           </div>
         </div>
@@ -227,11 +237,88 @@ function LiveBreakdown({ slots, filledCount }) {
   )
 }
 
+// Substitutes bench — 5 slots shown in the sidebar. Reuses the same place /
+// pick-up / move-swap interaction model as the pitch, driven by the shared
+// target-id arrays from DraftScreen.
+function BenchPanel({
+  benchSlots, phase, compatibleSlotIds, moveTargetIds, swapMoveTargetIds,
+  movingSlotId, canMove, onPlace, onSelectForMove, onMoveTo,
+}) {
+  const filled = benchSlots.filter(s => s.player).length
+  const isPlacing = phase === 'placing'
+  const isIdle = phase === 'idle'
+  const moving = movingSlotId != null
+
+  return (
+    <div className="bg-gray-800 rounded-xl p-3">
+      <p className="text-xs uppercase tracking-widest text-gray-500 mb-2">
+        Substitutes <span className="text-gray-600">{filled}/{benchSlots.length}</span>
+      </p>
+      <div className="grid grid-cols-5 gap-2">
+        {benchSlots.map(slot => {
+          if (!slot.player) {
+            const placeable = isPlacing && compatibleSlotIds.includes(slot.id)
+            const moveable = isIdle && moving && moveTargetIds.includes(slot.id)
+            const clickable = placeable || moveable
+            return (
+              <button
+                key={slot.id}
+                disabled={!clickable}
+                onClick={() => { if (placeable) onPlace?.(slot.id); else if (moveable) onMoveTo?.(slot.id) }}
+                className={`aspect-square rounded-full border-2 border-dashed flex items-center justify-center text-[9px] font-extrabold transition-all ${
+                  clickable
+                    ? 'border-yellow-400 bg-yellow-400/20 text-yellow-400 animate-pulse'
+                    : 'border-white/20 text-white/40'
+                }`}
+              >
+                SUB
+              </button>
+            )
+          }
+          const isMovingSelf = isIdle && slot.id === movingSlotId
+          const selectable = isIdle && canMove && !moving
+          const swapTarget = isIdle && moving && !isMovingSelf && swapMoveTargetIds.includes(slot.id)
+          const clickable = isMovingSelf || selectable || swapTarget
+          const dimmed = moving && !isMovingSelf && !swapTarget
+          return (
+            <button
+              key={slot.id}
+              disabled={!clickable}
+              onClick={() => { if (swapTarget) onMoveTo?.(slot.id); else if (isMovingSelf || selectable) onSelectForMove?.(slot.id) }}
+              title={slot.player.name}
+              className={`relative aspect-square rounded-full overflow-hidden border-2 transition-all ${
+                isMovingSelf ? 'border-yellow-400 ring-2 ring-yellow-400/60 animate-pulse'
+                  : swapTarget ? 'border-cyan-400 ring-2 ring-cyan-400/60 animate-pulse'
+                    : dimmed ? 'border-white/40 opacity-40'
+                      : 'border-white'
+              }`}
+            >
+              <FlagImg nation={slot.player.nation} className="w-full h-full object-cover" />
+              <span className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[8px] font-bold leading-tight truncate text-center px-0.5">
+                {slot.player.name.split(' ').pop()}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function DraftScreen({ config, onComplete }) {
   const isHardcore = config.mode === 'hardcore'
   const isClassic = config.mode === 'classic'
   const formationDef = formations[config.formation]
-  const initialSlots = formationDef.slots.map(s => ({ ...s, player: null }))
+  // Bench: 5 substitute slots — non-hardcore only.
+  const benchTemplate = isHardcore
+    ? []
+    : Array.from({ length: SUB_COUNT }, (_, i) => ({
+        id: `SUB${i + 1}`, position: 'SUB', group: 'SUB',
+      }))
+  const initialSlots = [
+    ...formationDef.slots.map(s => ({ ...s, player: null })),
+    ...benchTemplate.map(s => ({ ...s, player: null })),
+  ]
 
   const [slots, setSlots] = useState(initialSlots)
   const [spinQueue] = useState(() =>
@@ -245,19 +332,39 @@ export default function DraftScreen({ config, onComplete }) {
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [reelKey, setReelKey] = useState(0)
   const [skipsLeft, setSkipsLeft] = useState(MAX_SKIPS)
+  // Idle-phase free rearrange: slot id of the placed player picked up to move.
+  const [movingSlotId, setMovingSlotId] = useState(null)
   // Hardcore: pre-assigned slot for this spin
   const [assignedSlot, setAssignedSlot] = useState(() =>
     isHardcore ? pickRandom(initialSlots) : null
   )
 
-  const filledCount = slots.filter(s => s.player).length
+  const starterSlots = slots.filter(s => !isBench(s))
+  const benchSlots = slots.filter(isBench)
+  const startersFilled = starterSlots.filter(s => s.player).length
+  const benchFilled = benchSlots.filter(s => s.player).length
+  const xiComplete = startersFilled === 11
+  const allFull = slots.every(s => s.player)
 
+  // Hardcore keeps the original auto-start; classic/expert wait for the
+  // "Play the Cup" confirm button so the player can add subs / rearrange first.
   useEffect(() => {
-    if (filledCount === 11) setTimeout(() => onComplete(slots, MAX_SKIPS - skipsLeft), 600)
-  }, [filledCount])
+    if (isHardcore && startersFilled === 11) {
+      setTimeout(() => onComplete(slots, MAX_SKIPS - skipsLeft), 600)
+    }
+  }, [startersFilled])
+
+  function confirmAndPlay() {
+    if (!xiComplete) return
+    // The cup is played by the starting XI only — bench is never passed on.
+    onComplete(starterSlots, MAX_SKIPS - skipsLeft)
+  }
 
   function getEmptySlots(currentSlots = slots) {
     return currentSlots.filter(s => !s.player)
+  }
+  function getEmptyPitchSlots(currentSlots = slots) {
+    return currentSlots.filter(s => !s.player && !isBench(s))
   }
 
   // Names already on the pitch — used to prevent duplicate players
@@ -266,6 +373,7 @@ export default function DraftScreen({ config, onComplete }) {
   function doSpin() {
     if (phase !== 'idle') return
     if (isHardcore && !assignedSlot) return
+    setMovingSlotId(null)
     playSpin()
     const pair = spinQueue[spinIndex % spinQueue.length]
     setCurrentPair(pair)
@@ -287,10 +395,14 @@ export default function DraftScreen({ config, onComplete }) {
       // Show players that can play in the assigned position (0.85+), fall back to all if none
       const compatible = pool.filter(p => getFitMultiplier(assignedSlot.position, p.positions) >= 0.85)
       available = compatible.length > 0 ? compatible : pool
+    } else if (getEmptyPitchSlots().length === 0) {
+      // Starting XI complete — now drafting subs, so any remaining player can
+      // take an open bench slot.
+      available = pool
     } else {
-      const empties = getEmptySlots()
+      const emptyPitch = getEmptyPitchSlots()
       available = pool.filter(p =>
-        empties.some(s => getFitMultiplier(s.position, p.positions) >= 0.85) ||
+        emptyPitch.some(s => getFitMultiplier(s.position, p.positions) >= 0.85) ||
         // Classic: also offer players who fit a taken slot whose occupant can move.
         (isClassic && slots.some(s => s.player
           && getFitMultiplier(s.position, p.positions) >= 0.85
@@ -381,15 +493,61 @@ export default function DraftScreen({ config, onComplete }) {
     setPhase('idle')
   }
 
-  // Undo: clear a filled slot during idle phase. Removing a player to spin
-  // again is a re-roll, so it costs a skip — otherwise you could place, remove,
-  // and re-spin indefinitely, bypassing the skip limit. No undo in hardcore.
-  function clearSlot(slotId) {
-    if (phase !== 'idle' || isHardcore || skipsLeft <= 0) return
+  // Idle-phase rearrange. Tapping a placed player picks it up; tapping it again
+  // (or Cancel) puts it back down. No spin/hardcore.
+  function selectForMove(slotId) {
+    if (phase !== 'idle' || isHardcore) return
     const target = slots.find(s => s.id === slotId)
     if (!target || !target.player) return
+    setMovingSlotId(prev => (prev === slotId ? null : slotId))
+  }
+
+  function cancelMove() {
+    setMovingSlotId(null)
+  }
+
+  // Move/swap the picked-up player. Tapping an empty slot moves them there;
+  // tapping another placed player swaps the two (each must be eligible for the
+  // other's slot). Pure rearrangement — never consumes a skip, idle phase only.
+  function moveToSlot(destId) {
+    if (phase !== 'idle' || !movingSlotId) return
+    const src = slots.find(s => s.id === movingSlotId)
+    const dest = slots.find(s => s.id === destId)
+    if (!src || !src.player || !dest || dest.id === src.id) return
+
+    if (!dest.player) {
+      // Move into an empty slot.
+      if (!eligible(dest, src.player)) return
+      playPlace()
+      const player = src.player
+      setSlots(prev => prev.map(s => {
+        if (s.id === src.id) return { ...s, player: null }
+        if (s.id === dest.id) return { ...s, player }
+        return s
+      }))
+    } else {
+      // Swap two placed players — both must fit the other's slot.
+      if (!eligible(dest, src.player) || !eligible(src, dest.player)) return
+      playPlace()
+      const a = src.player, b = dest.player
+      setSlots(prev => prev.map(s => {
+        if (s.id === src.id) return { ...s, player: b }
+        if (s.id === dest.id) return { ...s, player: a }
+        return s
+      }))
+    }
+    setMovingSlotId(null)
+  }
+
+  // Removing a player to spin again is a re-roll, so it still costs a skip —
+  // otherwise you could place, remove, and re-spin indefinitely, bypassing the
+  // skip limit. No removal in hardcore.
+  function removeMovingPlayer() {
+    if (phase !== 'idle' || !movingSlotId || isHardcore || skipsLeft <= 0) return
+    const id = movingSlotId
+    setMovingSlotId(null)
     setSkipsLeft(n => n - 1)
-    setSlots(prev => prev.map(s => s.id === slotId ? { ...s, player: null } : s))
+    setSlots(prev => prev.map(s => s.id === id ? { ...s, player: null } : s))
   }
 
   function skipSpin() {
@@ -413,8 +571,21 @@ export default function DraftScreen({ config, onComplete }) {
   }
 
   const compatibleSlotIds = selectedPlayer
-    ? slots.filter(s => !s.player && getFitMultiplier(s.position, selectedPlayer.positions) >= 0.85).map(s => s.id)
+    ? slots.filter(s => !s.player && eligible(s, selectedPlayer)).map(s => s.id)
     : []
+
+  // Idle rearrange: the picked-up player, the open slots it can move to, and the
+  // placed players it can swap with (each must fit the other's slot).
+  const movingSlot = movingSlotId ? slots.find(s => s.id === movingSlotId) : null
+  const movingPlayer = movingSlot?.player || null
+  const moveTargetIds = movingPlayer
+    ? slots.filter(s => !s.player && eligible(s, movingPlayer)).map(s => s.id)
+    : []
+  const swapMoveTargetIds = movingPlayer
+    ? slots.filter(s => s.player && s.id !== movingSlotId
+        && eligible(s, movingPlayer) && eligible(movingSlot, s.player)).map(s => s.id)
+    : []
+  const canMove = phase === 'idle' && !isHardcore
 
   // Filled slots the spun player can take, where the current occupant can move
   // to another position they play (Classic mode only).
@@ -425,7 +596,6 @@ export default function DraftScreen({ config, onComplete }) {
       ).map(s => s.id)
     : []
 
-  const accentCls = isHardcore ? 'border-red-500 bg-red-500/10' : 'border-yellow-400 bg-yellow-400/10'
   const btnCls = isHardcore
     ? 'bg-red-500 hover:bg-red-400 text-white'
     : 'bg-yellow-400 hover:bg-yellow-300 text-gray-900'
@@ -445,13 +615,15 @@ export default function DraftScreen({ config, onComplete }) {
               </span>
             )}
             {isHardcore && <span className="text-xs text-red-400 font-bold">💀 HARDCORE</span>}
-            <span className="text-sm text-gray-400">{filledCount}/11</span>
+            <span className="text-sm text-gray-400">
+              {startersFilled}/11{benchSlots.length > 0 && benchFilled > 0 && <span className="text-gray-600"> · {benchFilled} sub{benchFilled !== 1 ? 's' : ''}</span>}
+            </span>
           </div>
         </div>
 
         {/* Spin / reel panel */}
         <div className="bg-gray-800 rounded-xl p-4">
-          {phase === 'idle' && (
+          {phase === 'idle' && !movingSlotId && (
             <>
               {isHardcore && assignedSlot && (
                 <div className="text-center mb-3">
@@ -461,19 +633,68 @@ export default function DraftScreen({ config, onComplete }) {
                   </div>
                 </div>
               )}
-              <button
-                onClick={doSpin}
-                disabled={filledCount === 11}
-                className={`w-full py-3 rounded-xl disabled:opacity-40 font-extrabold text-base transition-colors ${btnCls}`}
-              >
-                {isHardcore && assignedSlot
-                  ? `Spin for ${assignedSlot.position} 💀`
-                  : 'Spin ⚽'}
-              </button>
-              {filledCount > 0 && filledCount < 11 && (
-                <p className="text-center text-gray-500 text-xs mt-2">Tap a player on the pitch to remove them</p>
+              {!allFull && (
+                <button
+                  onClick={doSpin}
+                  className={`w-full py-3 rounded-xl disabled:opacity-40 font-extrabold text-base transition-colors ${btnCls}`}
+                >
+                  {isHardcore && assignedSlot
+                    ? `Spin for ${assignedSlot.position} 💀`
+                    : xiComplete ? 'Spin ⚽ — add a sub' : 'Spin ⚽'}
+                </button>
+              )}
+              {!isHardcore && xiComplete && (
+                <button
+                  onClick={confirmAndPlay}
+                  className="w-full mt-2 py-3 rounded-xl font-extrabold text-base bg-green-500 hover:bg-green-400 text-white transition-colors"
+                >
+                  ▶ Play the Cup
+                </button>
+              )}
+              {!isHardcore && startersFilled > 0 && (
+                <p className="text-center text-gray-500 text-xs mt-2">
+                  {xiComplete
+                    ? 'Tap a player to swap, or add subs before kick-off'
+                    : 'Tap a player on the pitch to move or swap them'}
+                </p>
               )}
             </>
+          )}
+
+          {phase === 'idle' && movingSlotId && movingPlayer && (
+            <div className="space-y-3">
+              <p className="text-xs uppercase tracking-widest text-gray-500 text-center">Move player</p>
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1.5">
+                  <span className="w-7 h-5 rounded overflow-hidden inline-flex shadow shrink-0"><FlagImg nation={movingPlayer.nation} className="w-full h-full object-cover" /></span>
+                  <span className="text-white font-bold text-sm">{movingPlayer.name}</span>
+                </div>
+                <div className="text-gray-400 text-xs mt-0.5">{getPlayablePositions(movingPlayer.positions).join(' / ')} · OVR {movingPlayer.overall}</div>
+              </div>
+              {moveTargetIds.length > 0 || swapMoveTargetIds.length > 0 ? (
+                <p className="text-yellow-400 text-xs text-center">
+                  Tap an open slot to move, or a highlighted player to swap — free, no skip.
+                </p>
+              ) : (
+                <p className="text-red-400 text-xs text-center">No slots or players this one can move to.</p>
+              )}
+              <div className="flex gap-2">
+                {!isHardcore && skipsLeft > 0 && (
+                  <button
+                    onClick={removeMovingPlayer}
+                    className="flex-1 py-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 text-xs font-bold transition-colors"
+                  >
+                    Remove (1 skip)
+                  </button>
+                )}
+                <button
+                  onClick={cancelMove}
+                  className="flex-1 py-2 rounded-lg border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
 
           {phase === 'spinning' && currentPair && (
@@ -525,14 +746,14 @@ export default function DraftScreen({ config, onComplete }) {
             )}
 
             {squad.map((player, i) => {
-              const empties = getEmptySlots()
-              const targetSlots = isHardcore ? [assignedSlot] : empties
+              const targetSlots = isHardcore ? [assignedSlot] : getEmptyPitchSlots()
+              const benchOnly = !isHardcore && targetSlots.length === 0
               const bestFit = targetSlots.reduce((best, s) => {
                 const m = getFitMultiplier(s.position, player.positions)
                 return m > best.mult ? { mult: m, pos: s.position } : best
               }, { mult: 0, pos: '' })
-              const fitCls = bestFit.mult === 1.0 ? 'text-green-400' : bestFit.mult >= 0.85 ? 'text-yellow-400' : 'text-orange-400'
-              const fitLabel = bestFit.mult === 1.0 ? 'Natural' : bestFit.mult >= 0.85 ? 'Compatible' : 'Off-pos'
+              const fitCls = benchOnly ? 'text-green-400' : bestFit.mult === 1.0 ? 'text-green-400' : bestFit.mult >= 0.85 ? 'text-yellow-400' : 'text-orange-400'
+              const fitLabel = benchOnly ? 'Sub' : bestFit.mult === 1.0 ? 'Natural' : bestFit.mult >= 0.85 ? 'Compatible' : 'Off-pos'
               return (
                 <PlayerPickCard
                   key={i}
@@ -551,14 +772,16 @@ export default function DraftScreen({ config, onComplete }) {
         {phase === 'placing' && selectedPlayer && (
           <div className="space-y-3">
             <div className="bg-gray-800 rounded-xl p-4">
-              <p className="text-xs uppercase tracking-widest text-gray-500 mb-2 text-center">Tap a slot on the pitch</p>
+              <p className="text-xs uppercase tracking-widest text-gray-500 mb-2 text-center">
+                {getEmptyPitchSlots().length === 0 ? 'Tap a sub slot to bench' : 'Tap a slot on the pitch'}
+              </p>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1.5">
                     <span className="w-7 h-5 rounded overflow-hidden inline-flex shadow shrink-0"><FlagImg nation={selectedPlayer.nation} className="w-full h-full object-cover" /></span>
                     <span className="text-white font-bold text-sm">{selectedPlayer.name}</span>
                   </div>
-                  <div className="text-gray-400 text-xs mt-0.5">{selectedPlayer.positions.join(' / ')} · OVR {selectedPlayer.overall}</div>
+                  <div className="text-gray-400 text-xs mt-0.5">{getPlayablePositions(selectedPlayer.positions).join(' / ')} · OVR {selectedPlayer.overall}</div>
                 </div>
               </div>
               {compatibleSlotIds.length === 0 && (
@@ -574,24 +797,44 @@ export default function DraftScreen({ config, onComplete }) {
           </div>
         )}
 
+        {/* Substitutes bench */}
+        {benchSlots.length > 0 && (
+          <BenchPanel
+            benchSlots={benchSlots}
+            phase={phase}
+            compatibleSlotIds={compatibleSlotIds}
+            moveTargetIds={moveTargetIds}
+            swapMoveTargetIds={swapMoveTargetIds}
+            movingSlotId={movingSlotId}
+            canMove={canMove}
+            onPlace={placePlayer}
+            onSelectForMove={selectForMove}
+            onMoveTo={moveToSlot}
+          />
+        )}
+
         {/* Live team breakdown */}
-        {filledCount > 0 && phase !== 'spinning' && (
-          <LiveBreakdown slots={slots} filledCount={filledCount} />
+        {startersFilled > 0 && phase !== 'spinning' && (
+          <LiveBreakdown slots={starterSlots} filledCount={startersFilled} />
         )}
       </div>
 
       {/* Pitch */}
       <div className="order-1 lg:order-2 sticky top-0 z-20 self-start w-full h-[44vh] lg:h-auto lg:static lg:self-auto lg:flex-1 flex items-center justify-center p-3 lg:p-4 bg-gray-950">
         <PitchView
-          slots={slots}
+          slots={starterSlots}
           phase={phase}
           compatibleSlotIds={compatibleSlotIds}
           assignedSlotId={isHardcore && phase === 'idle' ? assignedSlot?.id : null}
           onPlacePlayer={placePlayer}
-          onClearSlot={clearSlot}
-          canClear={phase === 'idle' && !isHardcore && skipsLeft > 0}
           swapSlotIds={swapSlotIds}
           onSwap={swapIntoSlot}
+          canMove={canMove}
+          movingSlotId={movingSlotId}
+          moveTargetIds={moveTargetIds}
+          swapMoveTargetIds={swapMoveTargetIds}
+          onSelectForMove={selectForMove}
+          onMoveTo={moveToSlot}
         />
       </div>
     </div>
