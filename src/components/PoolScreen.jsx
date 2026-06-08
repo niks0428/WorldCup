@@ -5,7 +5,6 @@ import euroA from '../data/players_euro_a.json'
 import euroB from '../data/players_euro_b.json'
 import plPlayers from '../data/players_pl.json'
 import { FlagImg } from '../lib/flags'
-import { getPlayablePositions } from '../utils/compatibility'
 
 const ALL = [...wcNew, ...wcOld, ...euroA, ...euroB, ...plPlayers]
 
@@ -105,9 +104,9 @@ export default function PoolScreen({ competition = 'wc', onBack }) {
                         {teamOpen && (
                           <div className="px-3 pb-2 divide-y divide-gray-700/50">
                             {players.map((p, i) => (
-                              <div key={i} className="flex items-center gap-2 py-1.5">
-                                <span className="text-[10px] text-gray-500 w-9 shrink-0">{getPlayablePositions(p.positions).join('/')}</span>
-                                <span className="text-sm text-gray-200 flex-1 truncate">{p.name}</span>
+                              <div key={i} className="flex items-center gap-3 py-1.5">
+                                <span className="text-[10px] font-bold text-gray-500 w-10 shrink-0 whitespace-nowrap">{p.positions.join('/')}</span>
+                                <span className="text-sm text-gray-200 flex-1 min-w-0 truncate">{p.name}</span>
                                 <span className={`text-sm font-bold tabular-nums shrink-0 ${ovrColor(p.overall)}`}>{p.overall}</span>
                               </div>
                             ))}
