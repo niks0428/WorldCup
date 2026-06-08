@@ -71,18 +71,21 @@ export function simulateLeague(slots, score, seedInput) {
   const rng = makeRng(`${seedInput || ''}|${squadSeed}|league-v1`)
   const S = Math.max(1, Math.min(99, score))
 
-  // Fixture order — opponents shuffled, each played home (H) then away (A).
+  // Each opponent is played once home, once away (38 games), then the whole
+  // calendar is shuffled so it's a realistic mixed fixture list — not each
+  // team's home and away games back-to-back.
   const fixtures = []
-  for (const opp of shuffle(OPPONENTS, rng)) {
+  for (const opp of OPPONENTS) {
     fixtures.push({ opp, home: true })
     fixtures.push({ opp, home: false })
   }
+  const schedule = shuffle(fixtures, rng)
 
   const matches = []
   let pts = 0, won = 0, drawn = 0, lost = 0
   let goalsFor = 0, goalsAgainst = 0
 
-  for (const fx of fixtures) {
+  for (const fx of schedule) {
     const homeBoost = fx.home ? 3 : 0
     const [gf, ga] = matchGoals(rng, S + homeBoost, fx.opp.str)
     const result = gf > ga ? 'W' : gf < ga ? 'L' : 'D'
