@@ -15,6 +15,38 @@
       { "id": "LW",   "position": "LW",  "group": "ATT", "x": 20, "y": 25 }
     ]
   },
+  "4-3-3 (2)": {
+    "label": "4-3-3 (2)",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "CDM",  "position": "CDM", "group": "MID", "x": 50, "y": 58 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 67, "y": 46 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 33, "y": 46 },
+      { "id": "RW",   "position": "RW",  "group": "ATT", "x": 80, "y": 25 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 },
+      { "id": "LW",   "position": "LW",  "group": "ATT", "x": 20, "y": 25 }
+    ]
+  },
+  "4-3-3 (4)": {
+    "label": "4-3-3 (4)",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 67, "y": 52 },
+      { "id": "CAM",  "position": "CAM", "group": "MID", "x": 50, "y": 40 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 33, "y": 52 },
+      { "id": "RW",   "position": "RW",  "group": "ATT", "x": 80, "y": 24 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 },
+      { "id": "LW",   "position": "LW",  "group": "ATT", "x": 20, "y": 24 }
+    ]
+  },
   "4-4-2": {
     "label": "4-4-2",
     "slots": [
@@ -29,6 +61,38 @@
       { "id": "LM",   "position": "LM",  "group": "MID", "x": 20, "y": 50 },
       { "id": "RST",  "position": "ST",  "group": "ATT", "x": 63, "y": 22 },
       { "id": "LST",  "position": "ST",  "group": "ATT", "x": 37, "y": 22 }
+    ]
+  },
+  "4-4-2 (2)": {
+    "label": "4-4-2 (2)",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 82, "y": 48 },
+      { "id": "RCDM", "position": "CDM", "group": "MID", "x": 60, "y": 56 },
+      { "id": "LCDM", "position": "CDM", "group": "MID", "x": 40, "y": 56 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 18, "y": 48 },
+      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 63, "y": 22 },
+      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 37, "y": 22 }
+    ]
+  },
+  "4-4-1-1": {
+    "label": "4-4-1-1",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 80, "y": 52 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 60, "y": 52 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 40, "y": 52 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 20, "y": 52 },
+      { "id": "CF",   "position": "CAM", "group": "ATT", "x": 50, "y": 34 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 }
     ]
   },
   "4-2-3-1": {
@@ -47,6 +111,134 @@
       { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 }
     ]
   },
+  "4-2-3-1 (2)": {
+    "label": "4-2-3-1 (2)",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "RCDM", "position": "CDM", "group": "MID", "x": 62, "y": 57 },
+      { "id": "LCDM", "position": "CDM", "group": "MID", "x": 38, "y": 57 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 80, "y": 40 },
+      { "id": "CAM",  "position": "CAM", "group": "MID", "x": 50, "y": 38 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 20, "y": 40 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 }
+    ]
+  },
+  "4-2-2-2": {
+    "label": "4-2-2-2",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "RCDM", "position": "CDM", "group": "MID", "x": 62, "y": 56 },
+      { "id": "LCDM", "position": "CDM", "group": "MID", "x": 38, "y": 56 },
+      { "id": "RAM",  "position": "CAM", "group": "MID", "x": 68, "y": 38 },
+      { "id": "LAM",  "position": "CAM", "group": "MID", "x": 32, "y": 38 },
+      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 60, "y": 20 },
+      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 40, "y": 20 }
+    ]
+  },
+  "4-1-4-1": {
+    "label": "4-1-4-1",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "CDM",  "position": "CDM", "group": "MID", "x": 50, "y": 58 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 80, "y": 44 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 60, "y": 44 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 40, "y": 44 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 20, "y": 44 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 }
+    ]
+  },
+  "4-1-2-1-2": {
+    "label": "4-1-2-1-2",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "CDM",  "position": "CDM", "group": "MID", "x": 50, "y": 58 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 70, "y": 46 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 30, "y": 46 },
+      { "id": "CAM",  "position": "CAM", "group": "MID", "x": 50, "y": 34 },
+      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 60, "y": 20 },
+      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 40, "y": 20 }
+    ]
+  },
+  "4-1-2-1-2 (2)": {
+    "label": "4-1-2-1-2 (2)",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "CDM",  "position": "CDM", "group": "MID", "x": 50, "y": 58 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 82, "y": 48 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 18, "y": 48 },
+      { "id": "CAM",  "position": "CAM", "group": "MID", "x": 50, "y": 36 },
+      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 60, "y": 20 },
+      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 40, "y": 20 }
+    ]
+  },
+  "4-3-1-2": {
+    "label": "4-3-1-2",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 68, "y": 52 },
+      { "id": "CM",   "position": "CM",  "group": "MID", "x": 50, "y": 54 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 32, "y": 52 },
+      { "id": "CAM",  "position": "CAM", "group": "MID", "x": 50, "y": 36 },
+      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 60, "y": 20 },
+      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 40, "y": 20 }
+    ]
+  },
+  "4-3-2-1": {
+    "label": "4-3-2-1",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 66, "y": 52 },
+      { "id": "CM",   "position": "CM",  "group": "MID", "x": 50, "y": 54 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 34, "y": 52 },
+      { "id": "RAM",  "position": "CAM", "group": "ATT", "x": 62, "y": 34 },
+      { "id": "LAM",  "position": "CAM", "group": "ATT", "x": 38, "y": 34 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 }
+    ]
+  },
+  "4-5-1": {
+    "label": "4-5-1",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
+      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 82, "y": 50 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 65, "y": 50 },
+      { "id": "CM",   "position": "CM",  "group": "MID", "x": 50, "y": 50 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 35, "y": 50 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 18, "y": 50 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 }
+    ]
+  },
   "3-5-2": {
     "label": "3-5-2",
     "slots": [
@@ -59,22 +251,6 @@
       { "id": "CM",   "position": "CM",  "group": "MID", "x": 50, "y": 48 },
       { "id": "LCM",  "position": "CM",  "group": "MID", "x": 35, "y": 50 },
       { "id": "LWB",  "position": "LWB", "group": "MID", "x": 15, "y": 55 },
-      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 63, "y": 22 },
-      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 37, "y": 22 }
-    ]
-  },
-  "5-3-2": {
-    "label": "5-3-2",
-    "slots": [
-      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
-      { "id": "RWB",  "position": "RWB", "group": "DEF", "x": 85, "y": 70 },
-      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 67, "y": 72 },
-      { "id": "CB",   "position": "CB",  "group": "DEF", "x": 50, "y": 74 },
-      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 33, "y": 72 },
-      { "id": "LWB",  "position": "LWB", "group": "DEF", "x": 15, "y": 70 },
-      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 68, "y": 50 },
-      { "id": "CM",   "position": "CM",  "group": "MID", "x": 50, "y": 48 },
-      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 32, "y": 50 },
       { "id": "RST",  "position": "ST",  "group": "ATT", "x": 63, "y": 22 },
       { "id": "LST",  "position": "ST",  "group": "ATT", "x": 37, "y": 22 }
     ]
@@ -95,19 +271,99 @@
       { "id": "LW",   "position": "LW",  "group": "ATT", "x": 22, "y": 24 }
     ]
   },
-  "4-5-1": {
-    "label": "4-5-1",
+  "3-4-1-2": {
+    "label": "3-4-1-2",
     "slots": [
       { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
-      { "id": "RB",   "position": "RB",  "group": "DEF", "x": 82, "y": 70 },
-      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 63, "y": 70 },
-      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 37, "y": 70 },
-      { "id": "LB",   "position": "LB",  "group": "DEF", "x": 18, "y": 70 },
-      { "id": "RM",   "position": "RM",  "group": "MID", "x": 82, "y": 50 },
-      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 65, "y": 50 },
-      { "id": "CM",   "position": "CM",  "group": "MID", "x": 50, "y": 50 },
-      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 35, "y": 50 },
-      { "id": "LM",   "position": "LM",  "group": "MID", "x": 18, "y": 50 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 70, "y": 74 },
+      { "id": "CB",   "position": "CB",  "group": "DEF", "x": 50, "y": 74 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 30, "y": 74 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 82, "y": 52 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 58, "y": 50 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 42, "y": 50 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 18, "y": 52 },
+      { "id": "CAM",  "position": "CAM", "group": "MID", "x": 50, "y": 34 },
+      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 60, "y": 20 },
+      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 40, "y": 20 }
+    ]
+  },
+  "3-4-2-1": {
+    "label": "3-4-2-1",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 70, "y": 74 },
+      { "id": "CB",   "position": "CB",  "group": "DEF", "x": 50, "y": 74 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 30, "y": 74 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 82, "y": 52 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 58, "y": 50 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 42, "y": 50 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 18, "y": 52 },
+      { "id": "RAM",  "position": "CAM", "group": "ATT", "x": 64, "y": 34 },
+      { "id": "LAM",  "position": "CAM", "group": "ATT", "x": 36, "y": 34 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 }
+    ]
+  },
+  "5-3-2": {
+    "label": "5-3-2",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RWB",  "position": "RWB", "group": "DEF", "x": 85, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 67, "y": 72 },
+      { "id": "CB",   "position": "CB",  "group": "DEF", "x": 50, "y": 74 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 33, "y": 72 },
+      { "id": "LWB",  "position": "LWB", "group": "DEF", "x": 15, "y": 70 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 68, "y": 50 },
+      { "id": "CM",   "position": "CM",  "group": "MID", "x": 50, "y": 48 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 32, "y": 50 },
+      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 63, "y": 22 },
+      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 37, "y": 22 }
+    ]
+  },
+  "5-2-1-2": {
+    "label": "5-2-1-2",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RWB",  "position": "RWB", "group": "DEF", "x": 85, "y": 68 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 67, "y": 74 },
+      { "id": "CB",   "position": "CB",  "group": "DEF", "x": 50, "y": 76 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 33, "y": 74 },
+      { "id": "LWB",  "position": "LWB", "group": "DEF", "x": 15, "y": 68 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 62, "y": 50 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 38, "y": 50 },
+      { "id": "CAM",  "position": "CAM", "group": "MID", "x": 50, "y": 36 },
+      { "id": "RST",  "position": "ST",  "group": "ATT", "x": 60, "y": 20 },
+      { "id": "LST",  "position": "ST",  "group": "ATT", "x": 40, "y": 20 }
+    ]
+  },
+  "5-2-3": {
+    "label": "5-2-3",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RWB",  "position": "RWB", "group": "DEF", "x": 85, "y": 68 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 67, "y": 74 },
+      { "id": "CB",   "position": "CB",  "group": "DEF", "x": 50, "y": 76 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 33, "y": 74 },
+      { "id": "LWB",  "position": "LWB", "group": "DEF", "x": 15, "y": 68 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 62, "y": 50 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 38, "y": 50 },
+      { "id": "RW",   "position": "RW",  "group": "ATT", "x": 78, "y": 26 },
+      { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 },
+      { "id": "LW",   "position": "LW",  "group": "ATT", "x": 22, "y": 26 }
+    ]
+  },
+  "5-4-1": {
+    "label": "5-4-1",
+    "slots": [
+      { "id": "GK",   "position": "GK",  "group": "GK",  "x": 50, "y": 88 },
+      { "id": "RWB",  "position": "RWB", "group": "DEF", "x": 85, "y": 70 },
+      { "id": "RCB",  "position": "CB",  "group": "DEF", "x": 67, "y": 72 },
+      { "id": "CB",   "position": "CB",  "group": "DEF", "x": 50, "y": 74 },
+      { "id": "LCB",  "position": "CB",  "group": "DEF", "x": 33, "y": 72 },
+      { "id": "LWB",  "position": "LWB", "group": "DEF", "x": 15, "y": 70 },
+      { "id": "RM",   "position": "RM",  "group": "MID", "x": 80, "y": 50 },
+      { "id": "RCM",  "position": "CM",  "group": "MID", "x": 60, "y": 50 },
+      { "id": "LCM",  "position": "CM",  "group": "MID", "x": 40, "y": 50 },
+      { "id": "LM",   "position": "LM",  "group": "MID", "x": 20, "y": 50 },
       { "id": "ST",   "position": "ST",  "group": "ATT", "x": 50, "y": 18 }
     ]
   }

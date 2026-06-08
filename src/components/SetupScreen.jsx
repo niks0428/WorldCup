@@ -5,7 +5,15 @@ import { isDailyDoneToday, timeUntilNextDaily } from '../lib/daily'
 import { isMuted, toggleMuted } from '../lib/sound'
 import Logo from './Logo'
 
-const FORMATIONS = ['4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3', '4-5-1']
+const FORMATIONS = [
+  '4-3-3', '4-3-3 (2)', '4-3-3 (4)',
+  '4-4-2', '4-4-2 (2)', '4-4-1-1',
+  '4-2-3-1', '4-2-3-1 (2)', '4-2-2-2',
+  '4-1-4-1', '4-1-2-1-2', '4-1-2-1-2 (2)',
+  '4-3-1-2', '4-3-2-1', '4-5-1',
+  '3-5-2', '3-4-3', '3-4-1-2', '3-4-2-1',
+  '5-3-2', '5-2-1-2', '5-2-3', '5-4-1',
+]
 const MODES = [
   { id: 'classic',  label: 'Classic',  badge: null, desc: 'Full squad, stats visible. Pick your slot. 3 skips.' },
   { id: 'expert',   label: 'Expert',   badge: null, desc: 'Position-compatible players only, no stats. 3 skips.' },
@@ -120,12 +128,12 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
         {/* Formation */}
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2">Formation</h2>
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             {FORMATIONS.map(f => (
               <button
                 key={f}
                 onClick={() => setFormation(f)}
-                className={`rounded-lg border-2 py-2 text-sm font-mono font-bold transition-all ${
+                className={`rounded-lg border-2 py-2 px-1 text-xs font-mono font-bold leading-tight transition-all whitespace-nowrap ${
                   formation === f ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300' : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
                 }`}
               >
