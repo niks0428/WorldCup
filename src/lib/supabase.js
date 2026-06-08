@@ -55,13 +55,14 @@ export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', 
   return res.json()
 }
 
-// Highest challenge win streaks. Supabase REST can't group-by per player, so we
-// pull the top rows by streak and keep each player's best client-side.
-export async function fetchTopStreaks({ limit = 20 } = {}) {
+// Highest streaks for a given column ('challenge_streak' = head-to-head wins,
+// 'streak' = daily-challenge day streak). Supabase REST can't group-by per
+// player, so we pull the top rows and keep each player's best client-side.
+export async function fetchTopStreaks({ limit = 20, column = 'challenge_streak' } = {}) {
   const params = new URLSearchParams()
-  params.set('select', 'player_name,challenge_streak,created_at')
-  params.set('challenge_streak', 'gt.0')
-  params.set('order', 'challenge_streak.desc,created_at.asc')
+  params.set('select', `player_name,${column},created_at`)
+  params.set(column, 'gt.0')
+  params.set('order', `${column}.desc,created_at.asc`)
   params.set('limit', '200')
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?${params}`, { headers: headers() })
@@ -74,7 +75,7 @@ export async function fetchTopStreaks({ limit = 20 } = {}) {
     if (!best.has(r.player_name)) best.set(r.player_name, r)
   }
   return [...best.values()]
-    .sort((a, b) => b.challenge_streak - a.challenge_streak ||
+    .sort((a, b) => b[column] - a[column] ||
       new Date(a.created_at) - new Date(b.created_at))
     .slice(0, limit)
 }

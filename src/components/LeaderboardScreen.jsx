@@ -86,6 +86,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
   // challenge or group view stays on its scores list.
   const [board, setBoard] = useState('scores')
   const [streaks, setStreaks] = useState([])
+  const [dailyStreaks, setDailyStreaks] = useState([])
   const showStreakToggle = !challengeSeed && !groupCode
   const myName = getSavedName()
 
@@ -108,8 +109,11 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
     if (!isConfigured || board !== 'streaks') return
     setLoading(true)
     setError(null)
-    fetchTopStreaks({ limit: 25 })
-      .then(setStreaks)
+    Promise.all([
+      fetchTopStreaks({ limit: 25, column: 'challenge_streak' }),
+      fetchTopStreaks({ limit: 25, column: 'streak' }),
+    ])
+      .then(([wins, daily]) => { setStreaks(wins); setDailyStreaks(daily) })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [board])
@@ -146,7 +150,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
         <h1 className="text-2xl font-extrabold text-white">
           {groupCode ? '👥 Group Leaderboard'
             : challengeSeed ? '🤝 Challenge Results'
-            : board === 'streaks' ? '🔥 Win Streaks'
+            : board === 'streaks' ? '🔥 Streaks'
             : '🏅 Leaderboard'}
         </h1>
       </div>
@@ -154,7 +158,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
       {/* Scores vs. win-streak board */}
       {isConfigured && showStreakToggle && (
         <div className="flex gap-2 mb-4">
-          {[['scores', '🏅 Scores'], ['streaks', '🔥 Win Streaks']].map(([id, label]) => (
+          {[['scores', '🏅 Scores'], ['streaks', '🔥 Streaks']].map(([id, label]) => (
             <button
               key={id}
               onClick={() => setBoard(id)}
@@ -241,40 +245,24 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
           {error && <div className="text-center text-red-400 py-16 text-sm">{error}</div>}
 
           {board === 'streaks' && !loading && !error && (
-            streaks.length === 0 ? (
-              <div className="text-center text-gray-500 py-16">No challenge wins yet — be the first!</div>
-            ) : (
-              <div className="space-y-2">
-                {streaks.map((s, i) => {
-                  const isMe = myName && s.player_name === myName
-                  return (
-                    <div
-                      key={`${s.player_name}-${i}`}
-                      className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
-                        isMe ? 'bg-orange-400/10 border border-orange-400/40' :
-                        i === 0 ? 'bg-yellow-400/10 border border-yellow-400/30' :
-                        i === 1 ? 'bg-gray-400/5 border border-gray-400/15' :
-                        i === 2 ? 'bg-orange-400/5 border border-orange-400/15' :
-                        'bg-gray-800'
-                      }`}
-                    >
-                      <span className="text-lg w-7 text-center shrink-0">
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (
-                          <span className="text-gray-500 text-sm font-bold">{i + 1}</span>
-                        )}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-white font-bold text-sm truncate">
-                          {s.player_name}{isMe && <span className="text-orange-400 text-xs font-normal"> (you)</span>}
-                        </div>
-                        <div className="text-gray-400 text-xs">Longest challenge win streak</div>
-                      </div>
-                      <div className="text-orange-400 font-extrabold text-lg shrink-0">{s.challenge_streak} 🔥</div>
-                    </div>
-                  )
-                })}
-              </div>
-            )
+            <div className="space-y-8">
+              <StreakTable
+                title="🤝 Challenge Win Streaks"
+                subtitle="Longest run of challenge wins"
+                rows={streaks}
+                valueKey="challenge_streak"
+                myName={myName}
+                emptyMsg="No challenge wins yet — be the first!"
+              />
+              <StreakTable
+                title="⭐ Daily Challenge Streaks"
+                subtitle="Most days played in a row"
+                rows={dailyStreaks}
+                valueKey="streak"
+                myName={myName}
+                emptyMsg="No daily streaks yet — play today's challenge!"
+              />
+            </div>
           )}
 
           {board === 'scores' && !loading && !error && scores.length === 0 && (
@@ -339,6 +327,50 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
             </div>
           )}
         </>
+      )}
+    </div>
+  )
+}
+
+// One streak ranking table (challenge wins or daily streak). `valueKey` is the
+// row field holding the count; the player's own row is highlighted.
+function StreakTable({ title, subtitle, rows, valueKey, myName, emptyMsg }) {
+  return (
+    <div>
+      <h2 className="text-sm font-bold text-white mb-0.5">{title}</h2>
+      <p className="text-gray-500 text-xs mb-3">{subtitle}</p>
+      {rows.length === 0 ? (
+        <div className="text-center text-gray-500 py-8 text-sm">{emptyMsg}</div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((s, i) => {
+            const isMe = myName && s.player_name === myName
+            return (
+              <div
+                key={`${s.player_name}-${i}`}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 ${
+                  isMe ? 'bg-orange-400/10 border border-orange-400/40' :
+                  i === 0 ? 'bg-yellow-400/10 border border-yellow-400/30' :
+                  i === 1 ? 'bg-gray-400/5 border border-gray-400/15' :
+                  i === 2 ? 'bg-orange-400/5 border border-orange-400/15' :
+                  'bg-gray-800'
+                }`}
+              >
+                <span className="text-lg w-7 text-center shrink-0">
+                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (
+                    <span className="text-gray-500 text-sm font-bold">{i + 1}</span>
+                  )}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-bold text-sm truncate">
+                    {s.player_name}{isMe && <span className="text-orange-400 text-xs font-normal"> (you)</span>}
+                  </div>
+                </div>
+                <div className="text-orange-400 font-extrabold text-lg shrink-0">{s[valueKey]} 🔥</div>
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
