@@ -14,12 +14,13 @@ function headers() {
 
 // ── Scores ────────────────────────────────────────────────────────────────────
 
-export async function submitScore({ playerName, score, tier, formation, mode, squadUrl, seed, challengeDate, groupCode, streak }) {
+export async function submitScore({ playerName, score, tier, formation, mode, squadUrl, seed, challengeDate, groupCode, streak, challengeStreak }) {
   const body = { player_name: playerName, score, tier, formation, mode, squad_url: squadUrl }
   if (seed)          body.seed = seed
   if (challengeDate) body.challenge_date = challengeDate
   if (groupCode)     body.group_code = groupCode
   if (streak)        body.streak = streak
+  if (challengeStreak != null) body.challenge_streak = challengeStreak
 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
     method: 'POST', headers: headers(), body: JSON.stringify(body),
@@ -52,6 +53,30 @@ export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?${params}`, { headers: headers() })
   if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
   return res.json()
+}
+
+// Highest challenge win streaks. Supabase REST can't group-by per player, so we
+// pull the top rows by streak and keep each player's best client-side.
+export async function fetchTopStreaks({ limit = 20 } = {}) {
+  const params = new URLSearchParams()
+  params.set('select', 'player_name,challenge_streak,created_at')
+  params.set('challenge_streak', 'gt.0')
+  params.set('order', 'challenge_streak.desc,created_at.asc')
+  params.set('limit', '200')
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?${params}`, { headers: headers() })
+  if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
+  const rows = await res.json()
+
+  // One entry per player — their highest streak (rows are already streak-desc).
+  const best = new Map()
+  for (const r of rows) {
+    if (!best.has(r.player_name)) best.set(r.player_name, r)
+  }
+  return [...best.values()]
+    .sort((a, b) => b.challenge_streak - a.challenge_streak ||
+      new Date(a.created_at) - new Date(b.created_at))
+    .slice(0, limit)
 }
 
 // ── Groups ────────────────────────────────────────────────────────────────────

@@ -2,13 +2,14 @@ import { calculateTeamScore, calculateGroupScores } from '../utils/scoring'
 import { simulateTournament } from '../utils/tournament'
 import { getAchievements } from '../lib/achievements'
 import PitchView from './PitchView'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { submitScore, isConfigured } from '../lib/supabase'
 import confetti from 'canvas-confetti'
 import { FlagImg } from '../lib/flags'
 import { playResult } from '../lib/sound'
 import { buildShareImage } from '../lib/shareImage'
 import { validateName } from '../lib/nameFilter'
+import { recordChallengeResult, getChallengeStreak } from '../lib/challengeStreak'
 
 function b64Encode(str) {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))))
@@ -36,8 +37,12 @@ function buildSquadUrl(slots, formation, mode) {
   return `${window.location.href.split('#')[0]}#s=${encodeSquad(slots, formation, mode)}`
 }
 
-function buildChallengeUrl(formation, seed) {
-  return `${window.location.href.split('#')[0]}#c=${formation}|${seed}`
+function buildChallengeUrl(formation, seed, score, name) {
+  const base = `${window.location.href.split('#')[0]}#c=${formation}|${seed}`
+  // Embed the challenger's score (+ name) so the opponent's result is a direct
+  // win/loss. Older links without these still work (no win judged).
+  if (score == null) return base
+  return `${base}|${score}|${encodeURIComponent(name || '')}`
 }
 
 function fireConfetti(score) {
@@ -72,6 +77,25 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   const isDaily = mode === 'daily'
   const inGroup = Boolean(groupCode)
 
+  // Head-to-head challenge: the link carried the challenger's score (+ name), so
+  // this result is a direct win/loss that drives the challenge win streak.
+  const challengerScore = config?.challengerScore
+  const challengerName = config?.challengerName || 'your mate'
+  const isChallenge = config?.isChallenge && challengerScore != null
+  const won = isChallenge && score > challengerScore
+  const [challengeStreak, setChallengeStreak] = useState(null)
+  const challengeRecorded = useRef(false)
+
+  // Record the challenge outcome once (win → streak +1, loss → reset to 0).
+  // Runs before the auto-submit effect so the new streak is persisted in time
+  // for doSubmit to read it back from localStorage. The ref guards against
+  // StrictMode's double-invoke (which would otherwise double-count a win).
+  useEffect(() => {
+    if (!isChallenge || challengeRecorded.current) return
+    challengeRecorded.current = true
+    setChallengeStreak(recordChallengeResult(won))
+  }, [])
+
   async function doSubmit(playerName) {
     const squadUrl = buildSquadUrl(slots, formation, mode)
     const today = new Date().toISOString().split('T')[0]
@@ -82,6 +106,9 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
       challengeDate: isDaily ? today : null,
       groupCode: groupCode || null,
       streak: streak || null,
+      // The recording effect runs first and persists the new streak, so read it
+      // straight from localStorage rather than racing React state.
+      challengeStreak: isChallenge ? getChallengeStreak().streak : null,
     })
   }
 
@@ -139,7 +166,7 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   }
 
   function handleChallenge() {
-    const url = buildChallengeUrl(formation, seed)
+    const url = buildChallengeUrl(formation, seed, score, getSavedName())
     navigator.clipboard.writeText(url).then(() => {
       setChallengeCopied(true); setTimeout(() => setChallengeCopied(false), 2500)
     })
@@ -194,6 +221,27 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
               Team Score: <span className="text-yellow-400 font-bold text-lg">{score}</span>
             </div>
           </div>
+
+          {/* Challenge head-to-head result */}
+          {isChallenge && (
+            <div className={`rounded-2xl p-4 mb-6 text-center border ${
+              won ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
+            }`}>
+              <div className="text-2xl mb-1">{won ? '🏆' : '😞'}</div>
+              <div className={`font-extrabold text-sm ${won ? 'text-green-400' : 'text-red-400'}`}>
+                {won
+                  ? `You beat ${challengerName} (${challengerScore})!`
+                  : `${challengerName} (${challengerScore}) held you off.`}
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                {won ? (
+                  <>Challenge win streak: <span className="text-orange-400 font-bold">{(challengeStreak?.streak ?? getChallengeStreak().streak)} 🔥</span></>
+                ) : (
+                  <>Win streak reset to 0</>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Group breakdown */}
           <div className="bg-gray-800 rounded-2xl p-4 mb-6">

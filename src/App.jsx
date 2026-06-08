@@ -10,6 +10,7 @@ import RevealScreen from './components/RevealScreen'
 import RunRevealScreen from './components/RunRevealScreen'
 import HowItWorksScreen from './components/HowItWorksScreen'
 import AchievementsScreen from './components/AchievementsScreen'
+import ChallengesScreen from './components/ChallengesScreen'
 import formations from './data/formations.json'
 import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
@@ -17,6 +18,7 @@ import euroA from './data/players_euro_a.json'
 import euroB from './data/players_euro_b.json'
 import { randomSeed } from './lib/seededRandom'
 import { getStreak, updateStreak } from './lib/streak'
+import { setLastChallengeSeed } from './lib/challengeStreak'
 import { markDailyDone } from './lib/daily'
 import { saveToHistory } from './lib/history'
 import { calculateTeamScore } from './utils/scoring'
@@ -47,13 +49,17 @@ function squadFromHash(hash) {
 
 function challengeFromHash(hash) {
   if (!hash.startsWith('#c=')) return null
-  const payload = hash.slice(3)
-  const pipe = payload.lastIndexOf('|')
-  if (pipe === -1) return null
-  const formation = payload.slice(0, pipe)
-  const seed = payload.slice(pipe + 1)
+  // formation|seed[|challengerScore|challengerName]. Neither formation nor seed
+  // contains '|', and the name is URI-encoded, so a plain split is safe. The
+  // score/name are optional — legacy links (formation|seed) still work.
+  const [formation, seed, scoreStr, nameEnc] = hash.slice(3).split('|')
   if (!formations[formation] || !seed) return null
-  return { formation, seed, mode: 'classic', isChallenge: true }
+  const parsedScore = parseInt(scoreStr, 10)
+  return {
+    formation, seed, mode: 'classic', isChallenge: true,
+    challengerScore: Number.isFinite(parsedScore) ? parsedScore : undefined,
+    challengerName: nameEnc ? decodeURIComponent(nameEnc) : undefined,
+  }
 }
 
 export default function App() {
@@ -77,7 +83,7 @@ export default function App() {
       return
     }
     const challenge = challengeFromHash(hash)
-    if (challenge) { setConfig(challenge); setScreen('draft') }
+    if (challenge) { setLastChallengeSeed(challenge.seed); setConfig(challenge); setScreen('draft') }
   }, [])
 
   function handleSetupDone(cfg) {
@@ -158,6 +164,7 @@ export default function App() {
           onGroup={() => setScreen('group')}
           onHowItWorks={() => setScreen('howto')}
           onAchievements={() => setScreen('achievements')}
+          onChallenges={() => setScreen('challenges')}
           streak={streak}
           currentGroup={currentGroup}
         />
@@ -197,6 +204,12 @@ export default function App() {
       )}
       {screen === 'howto' && <HowItWorksScreen onBack={() => setScreen('setup')} />}
       {screen === 'achievements' && <AchievementsScreen onBack={() => setScreen('setup')} />}
+      {screen === 'challenges' && (
+        <ChallengesScreen
+          onBack={() => setScreen('setup')}
+          onViewResults={seed => handleLeaderboard(seed, null)}
+        />
+      )}
       {screen === 'group' && (
         <GroupScreen
           onBack={() => setScreen('setup')}

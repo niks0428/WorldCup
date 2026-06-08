@@ -65,7 +65,7 @@ const MODES = [
   { id: 'hardcore', label: 'Hardcore', badge: '💀', desc: 'Random position assigned. No stats, no skips. Stats revealed at the end.' },
 ]
 
-export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, streak, currentGroup }) {
+export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, onChallenges, streak, currentGroup }) {
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
   const [showAllFormations, setShowAllFormations] = useState(false)
@@ -230,11 +230,13 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
             : <div />
           }
         </div>
-        {isConfigured && (
-          <button onClick={onLeaderboard} className="w-full py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">
-            🏅 Leaderboard
-          </button>
-        )}
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={onChallenges} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">🤝 Challenges</button>
+          {isConfigured
+            ? <button onClick={onLeaderboard} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">🏅 Leaderboard</button>
+            : <div />
+          }
+        </div>
       </div>
 
       <div className="mt-8 text-center space-y-2">
