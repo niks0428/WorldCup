@@ -1,4 +1,5 @@
 import { makeRng } from '../lib/seededRandom'
+import { awardStats } from './league'
 
 // Stage names in tournament order. A winner plays all 7.
 const STAGES = [
@@ -112,5 +113,6 @@ export function simulateTournament(slots, score, seedInput) {
     }
   }
 
-  return { tier: tierLabel, tierMeta: TIER_META[tierLabel], matches, goalsFor, goalsAgainst }
+  const { goldenBoot, playerOfTournament } = awardStats(slots, matches, rng)
+  return { tier: tierLabel, tierMeta: TIER_META[tierLabel], matches, goalsFor, goalsAgainst, goldenBoot, playerOfTournament }
 }

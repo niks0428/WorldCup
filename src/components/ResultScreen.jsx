@@ -536,6 +536,40 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             </div>
           )}
 
+          {/* Awards — Player of the Season/Tournament + Golden Boot */}
+          {(run.playerOfSeason || run.playerOfTournament || run.goldenBoot) && (
+            <div className="bg-gray-800 rounded-2xl p-4 mb-6">
+              <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Awards</p>
+              <div className="grid grid-cols-2 gap-3">
+                {(isPL ? run.playerOfSeason : run.playerOfTournament) && (
+                  <div className="bg-gray-700/60 rounded-xl p-3">
+                    <div className="text-[9px] uppercase tracking-wider text-yellow-400 mb-1.5">
+                      {isPL ? '🏅 Player of the Season' : '🌟 Player of the Tournament'}
+                    </div>
+                    <div className="text-white font-bold text-xs leading-tight truncate">
+                      {(isPL ? run.playerOfSeason : run.playerOfTournament).name}
+                    </div>
+                    <div className="text-[10px] mt-1 flex gap-1.5 flex-wrap">
+                      <span className="text-gray-500">{(isPL ? run.playerOfSeason : run.playerOfTournament).position}</span>
+                      <span className="text-green-400 font-bold">{(isPL ? run.playerOfSeason : run.playerOfTournament).goals}G</span>
+                      <span className="text-sky-400 font-bold">{(isPL ? run.playerOfSeason : run.playerOfTournament).assists}A</span>
+                    </div>
+                  </div>
+                )}
+                {run.goldenBoot && (
+                  <div className="bg-gray-700/60 rounded-xl p-3">
+                    <div className="text-[9px] uppercase tracking-wider text-yellow-400 mb-1.5">🥾 Golden Boot</div>
+                    <div className="text-white font-bold text-xs leading-tight truncate">{run.goldenBoot.name}</div>
+                    <div className="text-[10px] mt-1 flex gap-1.5 flex-wrap">
+                      <span className="text-gray-500">{run.goldenBoot.position}</span>
+                      <span className="text-green-400 font-bold">{run.goldenBoot.goals} goals</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3 mb-6">
             <StatCard label="Avg Rating" value={avgOverall} />
             <StatCard label="Formation" value={formation} />

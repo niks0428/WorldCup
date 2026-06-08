@@ -142,6 +142,10 @@ export function simulateLeague(slots, score, seedInput) {
   else if (position <= 17)   tier = 'Mid-table'
   else                       tier = 'Relegated'
 
+  // Distribute match goals across the XI for awards. Runs after all
+  // tier/table RNG so it never changes any existing result or standing.
+  const { goldenBoot, playerOfSeason } = awardStats(slots, matches, rng)
+
   return {
     tier,
     tierMeta: LEAGUE_TIER_META[tier],
@@ -151,5 +155,58 @@ export function simulateLeague(slots, score, seedInput) {
     perfect: won === 38,
     cleanSheets, biggestWin, biggestLoss, longestWinStreak,
     table,
+    goldenBoot, playerOfSeason,
   }
+}
+
+// Goal and assist probability weights by slot position. Attackers score, wide
+// midfielders create, deep midfielders contribute a little of both.
+const GOAL_W = {
+  GK:0.2,  CB:0.8,  LCB:0.8, RCB:0.8,
+  LB:1.5,  RB:1.5,  LWB:2.5, RWB:2.5,
+  CDM:2.5, CM:5,    LCM:5,   RCM:5,
+  CAM:8,   LM:7,    RM:7,
+  LW:11,   RW:11,
+  ST:22,   LST:22,  RST:22,  CF:16,
+}
+const ASSIST_W = {
+  GK:0.3,  CB:0.8,  LCB:0.8, RCB:0.8,
+  LB:3.5,  RB:3.5,  LWB:5,   RWB:5,
+  CDM:4,   CM:9,    LCM:9,   RCM:9,
+  CAM:13,  LM:11,   RM:11,
+  LW:12,   RW:12,
+  ST:4,    LST:4,   RST:4,   CF:6,
+}
+
+function pickWeighted(weights, rng, exclude = -1) {
+  let tot = 0
+  for (let i = 0; i < weights.length; i++) if (i !== exclude) tot += weights[i]
+  let r = rng() * tot
+  for (let i = 0; i < weights.length; i++) {
+    if (i !== exclude) { r -= weights[i]; if (r <= 0) return i }
+  }
+  return weights.findIndex((_, i) => i !== exclude)
+}
+
+export function awardStats(slots, matches, rng) {
+  const filled = slots.filter(s => s.player)
+  if (!filled.length) return { goldenBoot: null, playerOfSeason: null, playerOfTournament: null }
+  const gw = filled.map(s => GOAL_W[s.position] ?? 3)
+  const aw = filled.map(s => ASSIST_W[s.position] ?? 4)
+  const pg = new Array(filled.length).fill(0)
+  const pa = new Array(filled.length).fill(0)
+  for (const m of matches) {
+    for (let g = 0; g < m.gf; g++) {
+      const si = pickWeighted(gw, rng)
+      pg[si]++
+      if (rng() < 0.78 && filled.length > 1) pa[pickWeighted(aw, rng, si)]++
+    }
+  }
+  const stats = filled.map((s, i) => ({
+    name: s.player.name, position: s.position,
+    goals: pg[i], assists: pa[i], contributions: pg[i] + pa[i],
+  }))
+  const goldenBoot     = stats.reduce((b, p) => p.goals         > b.goals         ? p : b, stats[0])
+  const playerOfSeason = stats.reduce((b, p) => p.contributions > b.contributions ? p : b, stats[0])
+  return { goldenBoot, playerOfSeason, playerOfTournament: playerOfSeason }
 }
