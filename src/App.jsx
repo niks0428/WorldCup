@@ -12,6 +12,7 @@ import RunRevealScreen from './components/RunRevealScreen'
 import HowItWorksScreen from './components/HowItWorksScreen'
 import AchievementsScreen from './components/AchievementsScreen'
 import ChallengesScreen from './components/ChallengesScreen'
+import PoolScreen from './components/PoolScreen'
 import formations from './data/formations.json'
 import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
@@ -200,6 +201,7 @@ export default function App() {
           onHowItWorks={() => setScreen('howto')}
           onAchievements={() => setScreen('achievements')}
           onChallenges={() => setScreen('challenges')}
+          onPlayers={() => setScreen('pool')}
           streak={streak}
           currentGroup={currentGroup}
         />
@@ -240,6 +242,7 @@ export default function App() {
         <HistoryScreen onBack={() => setScreen('setup')} onViewSquad={handleViewSquad} />
       )}
       {screen === 'howto' && <HowItWorksScreen onBack={() => setScreen('setup')} />}
+      {screen === 'pool' && <PoolScreen competition={competition} onBack={() => setScreen('setup')} />}
       {screen === 'achievements' && <AchievementsScreen onBack={() => setScreen('setup')} />}
       {screen === 'challenges' && (
         <ChallengesScreen
