@@ -10,7 +10,7 @@ export const LEAGUE_TIER_META = {
   'Invincibles':       { label: 'Invincibles · 38-0-0', emoji: '🏆', desc: 'Won all 38. Unbeaten champions. Immortal.' },
   'Champions':         { label: 'Champions',             emoji: '🏆', desc: 'Premier League title.' },
   'Title Race':        { label: 'Runners-up',            emoji: '🥈', desc: 'So close — pipped to the title.' },
-  'Champions League':  { label: 'Champions League',      emoji: '🔵', desc: 'Top four. Europe’s elite next season.' },
+  'Champions League':  { label: 'Champions League',      emoji: '🔵', desc: "Top four. Europe's elite next season." },
   'Europa':            { label: 'Europa Places',         emoji: '🟢', desc: 'European qualification.' },
   'Mid-table':         { label: 'Mid-table',             emoji: '⚪', desc: 'Safe and steady.' },
   'Relegated':         { label: 'Relegated',             emoji: '🔻', desc: 'Down to the Championship.' },
@@ -73,14 +73,14 @@ export function simulateLeague(slots, score, seedInput) {
   const S = Math.max(1, Math.min(99, score))
 
   // Each opponent is played once home, once away (38 games), then the whole
-  // calendar is shuffled so it's a realistic mixed fixture list — not each
-  // team's home and away games back-to-back.
+  // calendar is shuffled so it's a realistic mixed fixture list. Each fixture
+  // carries its matchday number so the display labels are accurate.
   const fixtures = []
   for (const opp of OPPONENTS) {
     fixtures.push({ opp, home: true })
     fixtures.push({ opp, home: false })
   }
-  const schedule = shuffle(fixtures, rng)
+  const schedule = shuffle(fixtures, rng).map((fx, idx) => ({ ...fx, md: idx + 1 }))
 
   const matches = []
   let pts = 0, won = 0, drawn = 0, lost = 0
@@ -94,21 +94,44 @@ export function simulateLeague(slots, score, seedInput) {
     else if (result === 'D') { pts += 1; drawn++ }
     else lost++
     goalsFor += gf; goalsAgainst += ga
-    matches.push({
-      opponent: fx.opp.name, home: fx.home, gf, ga, result,
-      drawn: result === 'D',
-    })
+    matches.push({ opponent: fx.opp.name, home: fx.home, gf, ga, result, md: fx.md })
   }
 
-  // Rank us in a 20-team table. Each opponent gets a seeded season points total
-  // loosely tied to its base strength, then we slot in by points.
+  // Extra season stats.
+  const cleanSheets = matches.filter(m => m.ga === 0).length
+  let biggestWin = null, biggestLoss = null
+  let longestWinStreak = 0, curStreak = 0
+  for (const m of matches) {
+    if (m.result === 'W') {
+      curStreak++
+      if (curStreak > longestWinStreak) longestWinStreak = curStreak
+      if (!biggestWin || (m.gf - m.ga) > (biggestWin.gf - biggestWin.ga)) biggestWin = m
+    } else {
+      curStreak = 0
+      if (m.result === 'L' && (!biggestLoss || (m.ga - m.gf) > (biggestLoss.ga - biggestLoss.gf))) biggestLoss = m
+    }
+  }
+
+  // Build the full 20-team table. Rivals' points are seeded per opponent with a
+  // tighter ±5 swing (down from ±8) so stronger clubs stay above weaker ones
+  // more reliably. We also compute a plausible GD so the tiebreaker column
+  // makes sense. Player's row is included and the table is sorted pts→GD.
   const tableOthers = OPPONENTS.map(o => {
-    const base = (o.str - 64) * 3.9            // spreads rivals ~20 → ~90 pts
-    const swing = (rng() - 0.5) * 16
-    return { name: o.name, pts: Math.max(16, Math.min(97, Math.round(base + 18 + swing))) }
+    const base = (o.str - 64) * 3.9            // spreads rivals ~20 → ~74 pts
+    const swing = (rng() - 0.5) * 10           // ±5 pts, down from ±8
+    const rivalPts = Math.max(16, Math.min(97, Math.round(base + 18 + swing)))
+    // GD scales with pts (positive = winning team) plus small noise.
+    const rivalGD = Math.round((rivalPts - 45) * 0.85 + (rng() - 0.5) * 8)
+    return { name: o.name, pts: rivalPts, gd: rivalGD }
   })
-  const above = tableOthers.filter(t => t.pts > pts).length
-  const position = above + 1                   // 1 = champions
+
+  const playerGD = goalsFor - goalsAgainst
+  const myRow = { name: 'Your XI', pts, gd: playerGD, isPlayer: true }
+  const table = [...tableOthers, myRow]
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd)
+    .map((r, i) => ({ ...r, pos: i + 1 }))
+
+  const position = table.find(r => r.isPlayer)?.pos ?? 20
 
   let tier
   if (won === 38)            tier = 'Invincibles'
@@ -126,5 +149,7 @@ export function simulateLeague(slots, score, seedInput) {
     points: pts, won, drawn, lost,
     goalsFor, goalsAgainst,
     perfect: won === 38,
+    cleanSheets, biggestWin, biggestLoss, longestWinStreak,
+    table,
   }
 }

@@ -82,6 +82,8 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
   const [challengeCopied, setChallengeCopied] = useState(false)
   const [imgState, setImgState] = useState('idle')
   const [nameError, setNameError] = useState('')
+  const [showAllMatches, setShowAllMatches] = useState(false)
+  const [showTable, setShowTable] = useState(false)
   const isDaily = mode === 'daily'
   const inGroup = Boolean(groupCode)
 
@@ -305,55 +307,147 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
           <div className="bg-gray-800 rounded-2xl p-4 mb-6">
             <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">{isPL ? 'The Season' : 'Tournament Run'}</p>
 
-            {isPL && (
-              <div className="grid grid-cols-4 gap-2 text-center mb-3">
-                <div>
-                  <div className="text-white font-extrabold text-lg tabular-nums">{ordinal(run.position)}</div>
-                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Finish</div>
-                </div>
-                <div>
-                  <div className="text-yellow-400 font-extrabold text-lg tabular-nums">{run.points}</div>
-                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Points</div>
-                </div>
-                <div>
-                  <div className="font-extrabold text-lg tabular-nums text-white">
-                    <span className="text-green-400">{run.won}</span>-<span className="text-yellow-400">{run.drawn}</span>-<span className="text-red-400">{run.lost}</span>
+            {isPL && (() => {
+              const sortedByMD = [...run.matches].sort((a, b) => a.md - b.md)
+              // Pick highlight matches: opener, finale, biggest win, biggest loss, vs strongest
+              const highlightMDs = new Set([
+                sortedByMD[0]?.md,
+                sortedByMD[37]?.md,
+                run.biggestWin?.md,
+                run.biggestLoss?.md,
+                run.matches.find(m => m.opponent === 'Liverpool')?.md,
+                run.matches.find(m => m.opponent === 'Arsenal')?.md,
+              ].filter(m => m != null))
+              const highlights = sortedByMD.filter(m => highlightMDs.has(m.md))
+              const displayMatches = showAllMatches ? sortedByMD : highlights
+
+              return (
+                <>
+                  {/* Primary stats row */}
+                  <div className="grid grid-cols-4 gap-2 text-center mb-3">
+                    <div>
+                      <div className="text-white font-extrabold text-lg tabular-nums">{ordinal(run.position)}</div>
+                      <div className="text-[9px] uppercase tracking-wider text-gray-500">Finish</div>
+                    </div>
+                    <div>
+                      <div className="text-yellow-400 font-extrabold text-lg tabular-nums">{run.points}</div>
+                      <div className="text-[9px] uppercase tracking-wider text-gray-500">Points</div>
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-base tabular-nums text-white leading-tight">
+                        <span className="text-green-400">{run.won}</span><span className="text-gray-600">-</span><span className="text-yellow-400">{run.drawn}</span><span className="text-gray-600">-</span><span className="text-red-400">{run.lost}</span>
+                      </div>
+                      <div className="text-[9px] uppercase tracking-wider text-gray-500">W-D-L</div>
+                    </div>
+                    <div>
+                      <div className="text-white font-extrabold text-lg tabular-nums">
+                        {run.goalsFor - run.goalsAgainst >= 0 ? '+' : ''}{run.goalsFor - run.goalsAgainst}
+                      </div>
+                      <div className="text-[9px] uppercase tracking-wider text-gray-500">GD</div>
+                    </div>
                   </div>
-                  <div className="text-[9px] uppercase tracking-wider text-gray-500">W-D-L</div>
-                </div>
-                <div>
-                  <div className="text-white font-extrabold text-lg tabular-nums">
-                    {run.goalsFor - run.goalsAgainst >= 0 ? '+' : ''}{run.goalsFor - run.goalsAgainst}
+
+                  {/* Secondary stats row */}
+                  <div className="grid grid-cols-3 gap-2 text-center mb-3 pb-3 border-b border-gray-700">
+                    <div>
+                      <div className="text-sky-400 font-extrabold text-base tabular-nums">{run.cleanSheets}</div>
+                      <div className="text-[9px] uppercase tracking-wider text-gray-500">Clean Sheets</div>
+                    </div>
+                    <div>
+                      <div className="text-green-400 font-extrabold text-base tabular-nums">
+                        {run.biggestWin ? `${run.biggestWin.gf}–${run.biggestWin.ga}` : '—'}
+                      </div>
+                      <div className="text-[9px] uppercase tracking-wider text-gray-500">Best Win</div>
+                    </div>
+                    <div>
+                      <div className="text-red-400 font-extrabold text-base tabular-nums">
+                        {run.biggestLoss ? `${run.biggestLoss.gf}–${run.biggestLoss.ga}` : '—'}
+                      </div>
+                      <div className="text-[9px] uppercase tracking-wider text-gray-500">Worst Loss</div>
+                    </div>
                   </div>
-                  <div className="text-[9px] uppercase tracking-wider text-gray-500">GD</div>
-                </div>
+
+                  {/* Form strip — last 10 games */}
+                  <div className="mb-3">
+                    <div className="text-[9px] uppercase tracking-wider text-gray-500 mb-1.5">Recent Form (last 10)</div>
+                    <div className="flex gap-1">
+                      {sortedByMD.slice(-10).map((m, i) => (
+                        <span key={i} className={`flex-1 h-5 rounded text-[8px] font-extrabold flex items-center justify-center ${
+                          m.result === 'W' ? 'bg-green-500/30 text-green-400' :
+                          m.result === 'L' ? 'bg-red-500/30 text-red-400' :
+                          'bg-yellow-400/20 text-yellow-400'
+                        }`}>{m.result}</span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Match list — highlights by default, full season on toggle */}
+                  <div className="space-y-1.5">
+                    {displayMatches.map((m, i) => {
+                      const chipCls = m.result === 'W'
+                        ? 'bg-green-500/20 text-green-400'
+                        : m.result === 'L'
+                          ? 'bg-red-500/20 text-red-400'
+                          : 'bg-yellow-400/20 text-yellow-400'
+                      const isBigWin = run.biggestWin?.md === m.md
+                      const isBigLoss = run.biggestLoss?.md === m.md
+                      return (
+                        <div key={m.md} className="flex items-center gap-2 text-sm">
+                          <span className="text-[10px] text-gray-500 w-[5.5rem] shrink-0 leading-tight">
+                            MD {m.md} · {m.home ? 'H' : 'A'}
+                          </span>
+                          <span className="w-5 h-3.5 inline-flex shrink-0 rounded-sm overflow-hidden">
+                            <FlagImg nation={m.opponent} className="w-full h-full" />
+                          </span>
+                          <span className="text-gray-300 flex-1 truncate">{m.opponent}</span>
+                          <span className="text-white font-bold tabular-nums shrink-0">{m.gf}–{m.ga}</span>
+                          <span className={`text-[10px] font-extrabold rounded px-1.5 py-0.5 w-6 text-center shrink-0 ${chipCls}`}>
+                            {m.result}
+                          </span>
+                          {(isBigWin || isBigLoss) && (
+                            <span className="text-[9px] text-gray-500 shrink-0" title={isBigWin ? 'Biggest win' : 'Biggest loss'}>
+                              {isBigWin ? '⭐' : '💔'}
+                            </span>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => setShowAllMatches(v => !v)}
+                    className="mt-2 w-full text-[10px] text-gray-500 hover:text-gray-300 transition-colors py-1"
+                  >
+                    {showAllMatches ? '▲ Show highlights only' : `▼ Show all 38 games`}
+                  </button>
+                </>
+              )
+            })()}
+
+            {!isPL && (
+              <div className="space-y-1.5">
+                {run.matches.map((m, i) => {
+                  const chipCls = m.result === 'W'
+                    ? 'bg-green-500/20 text-green-400'
+                    : m.result === 'L'
+                      ? 'bg-red-500/20 text-red-400'
+                      : 'bg-yellow-400/20 text-yellow-400'
+                  return (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <span className="text-[10px] text-gray-500 w-[5.5rem] shrink-0 leading-tight">{m.stage}</span>
+                      <span className="w-5 h-3.5 inline-flex shrink-0">
+                        <FlagImg nation={m.opponent} className="w-full h-full" />
+                      </span>
+                      <span className="text-gray-300 flex-1 truncate">{m.opponent}</span>
+                      <span className="text-white font-bold tabular-nums shrink-0">{m.gf}–{m.ga}</span>
+                      <span className={`text-[10px] font-extrabold rounded px-1.5 py-0.5 w-6 text-center shrink-0 ${chipCls}`}>
+                        {m.result}
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
             )}
-
-            <div className={`space-y-1.5 ${isPL ? 'max-h-64 overflow-y-auto pr-1' : ''}`}>
-              {run.matches.map((m, i) => {
-                const chipCls = m.result === 'W'
-                  ? 'bg-green-500/20 text-green-400'
-                  : m.result === 'L'
-                    ? 'bg-red-500/20 text-red-400'
-                    : 'bg-yellow-400/20 text-yellow-400'
-                return (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <span className="text-[10px] text-gray-500 w-[5.5rem] shrink-0 leading-tight">
-                      {isPL ? `MD ${i + 1} · ${m.home ? 'H' : 'A'}` : m.stage}
-                    </span>
-                    <span className="w-5 h-3.5 inline-flex shrink-0">
-                      <FlagImg nation={m.opponent} className="w-full h-full" />
-                    </span>
-                    <span className="text-gray-300 flex-1 truncate">{m.opponent}</span>
-                    <span className="text-white font-bold tabular-nums shrink-0">{m.gf}–{m.ga}</span>
-                    <span className={`text-[10px] font-extrabold rounded px-1.5 py-0.5 w-6 text-center shrink-0 ${chipCls}`}>
-                      {m.result}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
 
             {!isPL && run.matches.some(m => m.pens) && (
               <p className="text-[10px] text-gray-500 mt-2">
@@ -378,6 +472,58 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
               </div>
             </div>
           </div>
+
+          {/* League table — PL only */}
+          {isPL && (
+            <div className="bg-gray-800 rounded-2xl p-4 mb-6">
+              <button
+                onClick={() => setShowTable(v => !v)}
+                className="w-full flex items-center justify-between text-xs uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors mb-0"
+              >
+                <span>League Table</span>
+                <span>{showTable ? '▲' : '▼'}</span>
+              </button>
+              {showTable && (
+                <div className="mt-3 space-y-0.5">
+                  {/* Header */}
+                  <div className="flex items-center gap-2 text-[9px] uppercase tracking-wider text-gray-600 px-1 pb-1 border-b border-gray-700">
+                    <span className="w-4 text-right shrink-0">#</span>
+                    <span className="w-4 shrink-0" />
+                    <span className="flex-1">Club</span>
+                    <span className="w-7 text-right tabular-nums">Pts</span>
+                    <span className="w-8 text-right tabular-nums">GD</span>
+                  </div>
+                  {run.table.map(row => (
+                    <div
+                      key={row.name}
+                      className={`flex items-center gap-2 text-xs rounded px-1 py-1 ${
+                        row.isPlayer ? 'bg-yellow-400/10 border border-yellow-400/25' : ''
+                      }`}
+                    >
+                      <span className={`w-4 text-right shrink-0 tabular-nums ${
+                        row.pos <= 4 ? 'text-sky-400' : row.pos >= 18 ? 'text-red-400' : 'text-gray-500'
+                      }`}>{row.pos}</span>
+                      <span className="w-4 h-3 inline-flex shrink-0 rounded-sm overflow-hidden">
+                        {!row.isPlayer && <FlagImg nation={row.name} className="w-full h-full" />}
+                      </span>
+                      <span className={`flex-1 truncate ${row.isPlayer ? 'text-yellow-400 font-bold' : 'text-gray-300'}`}>
+                        {row.isPlayer ? 'Your XI' : row.name}
+                      </span>
+                      <span className={`w-7 text-right tabular-nums font-bold ${row.isPlayer ? 'text-yellow-400' : 'text-white'}`}>
+                        {row.pts}
+                      </span>
+                      <span className={`w-8 text-right tabular-nums text-[10px] ${
+                        row.gd > 0 ? 'text-green-400' : row.gd < 0 ? 'text-red-400' : 'text-gray-500'
+                      }`}>
+                        {row.gd >= 0 ? '+' : ''}{row.gd}
+                      </span>
+                    </div>
+                  ))}
+                  <p className="text-[9px] text-gray-600 pt-1">🔵 top 4 = UCL · 🔴 bottom 3 = relegated</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3 mb-6">
             <StatCard label="Avg Rating" value={avgOverall} />
