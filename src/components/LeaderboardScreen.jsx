@@ -59,12 +59,16 @@ const SORT_TABS = [
   { id: 'placement', label: 'Placement' },
   { id: 'rating',    label: 'Rating' },
   { id: 'gd',        label: 'Goal Diff' },
+  { id: 'gf',        label: 'Scored' },
+  { id: 'ga',        label: 'Conceded' },
 ]
 
-// The chosen sort field's value for a row (higher = better).
+// The chosen sort field's raw value for a row. 'desc' = highest value first.
 function primaryVal(s, sortBy) {
   if (sortBy === 'rating') return s.score
   if (sortBy === 'gd') return s._gd
+  if (sortBy === 'gf') return s._gf
+  if (sortBy === 'ga') return s._ga
   return TIER_RANK[s.tier] || 0 // placement
 }
 
@@ -171,7 +175,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode }) 
           )}
 
           {/* Sort field + direction */}
-          <div className="flex gap-2 mb-2">
+          <div className="grid grid-cols-3 gap-2 mb-2">
             {SORT_TABS.map(t => (
               <button
                 key={t.id}
