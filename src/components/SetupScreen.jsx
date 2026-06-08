@@ -174,35 +174,40 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
         {/* Formation */}
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2">Formation</h2>
-          <div className="grid grid-cols-3 gap-2">
-            {(showAllFormations
-              ? FORMATIONS
-              // collapsed: show popular shapes, plus the selected one if it isn't popular
-              : POPULAR_FORMATIONS.includes(formation)
-                ? POPULAR_FORMATIONS
-                : [...POPULAR_FORMATIONS, formation]
-            ).map(f => (
+          <div className="sm:flex sm:gap-3 sm:items-start">
+            {/* Buttons */}
+            <div className="sm:flex-1">
+              <div className="grid grid-cols-3 sm:grid-cols-2 gap-2">
+                {(showAllFormations
+                  ? FORMATIONS
+                  // collapsed: show popular shapes, plus the selected one if it isn't popular
+                  : POPULAR_FORMATIONS.includes(formation)
+                    ? POPULAR_FORMATIONS
+                    : [...POPULAR_FORMATIONS, formation]
+                ).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setFormation(f)}
+                    className={`rounded-lg border-2 py-2 px-1 text-xs font-mono font-bold leading-tight transition-all whitespace-nowrap ${
+                      formation === f ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300' : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
               <button
-                key={f}
-                onClick={() => setFormation(f)}
-                className={`rounded-lg border-2 py-2 px-1 text-xs font-mono font-bold leading-tight transition-all whitespace-nowrap ${
-                  formation === f ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300' : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
-                }`}
+                onClick={() => setShowAllFormations(v => !v)}
+                className="mt-2 w-full py-1.5 text-xs font-semibold uppercase tracking-widest text-gray-500 hover:text-yellow-300 transition-colors"
               >
-                {f}
+                {showAllFormations ? '− Show fewer' : `+ Show all ${FORMATIONS.length}`}
               </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setShowAllFormations(v => !v)}
-            className="mt-2 w-full py-1.5 text-xs font-semibold uppercase tracking-widest text-gray-500 hover:text-yellow-300 transition-colors"
-          >
-            {showAllFormations ? '− Show fewer' : `+ Show all ${FORMATIONS.length}`}
-          </button>
+            </div>
 
-          {/* Live preview of the selected formation */}
-          <div className="mt-3">
-            <FormationPreview formation={formation} />
+            {/* Live preview of the selected formation — right side on desktop, below on mobile */}
+            <div className="mt-3 sm:mt-0 sm:w-[140px] sm:shrink-0 sm:sticky sm:top-4">
+              <FormationPreview formation={formation} />
+            </div>
           </div>
         </div>
 
