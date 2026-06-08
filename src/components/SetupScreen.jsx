@@ -3,6 +3,7 @@ import { isConfigured } from '../lib/supabase'
 import { todaySeed } from '../lib/seededRandom'
 import { isDailyDoneToday, timeUntilNextDaily } from '../lib/daily'
 import { isMuted, toggleMuted } from '../lib/sound'
+import { getChallengeStreak } from '../lib/challengeStreak'
 import Logo from './Logo'
 import formationsData from '../data/formations.json'
 
@@ -72,6 +73,7 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
   const [dailyDone] = useState(() => isDailyDoneToday())
   const [countdown, setCountdown] = useState(() => timeUntilNextDaily().label)
   const [muted, setMuted] = useState(() => isMuted())
+  const [challengeStreak] = useState(() => getChallengeStreak())
 
   useEffect(() => {
     if (!dailyDone) return
@@ -81,6 +83,7 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
   const hasStreak = streak?.streak > 0
+  const hasChallengeStreak = challengeStreak?.streak > 0
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10 relative">
@@ -100,11 +103,25 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
           <span className="block text-5xl md:text-6xl font-extrabold tracking-tight">Trophy</span>
         </h1>
 
-        {/* Streak badge */}
-        {hasStreak && (
-          <div className="inline-flex items-center gap-1.5 mt-3 bg-orange-500/15 border border-orange-500/30 rounded-full px-3 py-1">
-            <span className="text-base">🔥</span>
-            <span className="text-orange-400 font-bold text-sm">{streak.streak} day streak</span>
+        {/* Streak badges */}
+        {(hasStreak || hasChallengeStreak) && (
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+            {hasStreak && (
+              <div className="inline-flex items-center gap-1.5 bg-orange-500/15 border border-orange-500/30 rounded-full px-3 py-1">
+                <span className="text-base">🔥</span>
+                <span className="text-orange-400 font-bold text-sm">{streak.streak} day streak</span>
+              </div>
+            )}
+            {hasChallengeStreak && (
+              <button
+                onClick={onChallenges}
+                className="inline-flex items-center gap-1.5 bg-yellow-400/15 border border-yellow-400/30 hover:border-yellow-400/60 rounded-full px-3 py-1 transition-colors"
+                title="View challenge win streaks"
+              >
+                <span className="text-base">🤝</span>
+                <span className="text-yellow-400 font-bold text-sm">{challengeStreak.streak} challenge wins</span>
+              </button>
+            )}
           </div>
         )}
       </div>
