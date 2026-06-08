@@ -36,10 +36,10 @@ function buildPairs(pool) {
   return pairs
 }
 
-// Reel/label text for a team×edition pair. PL shows the FIFA edition; WC/Euro
-// shows the tournament + year.
+// Reel/label text for a team×edition pair. PL shows the real-world season the
+// FIFA edition represents (FIFA 07 → 2006/07); WC/Euro shows tournament + year.
 function periodLabel(pair) {
-  if (pair.tournament === 'PL') return `FIFA ${String(pair.year).slice(2)}`
+  if (pair.tournament === 'PL') return `${pair.year - 1}/${String(pair.year).slice(-2)}`
   return `${pair.tournament === 'EURO' ? 'EURO' : 'WC'} ${pair.year}`
 }
 

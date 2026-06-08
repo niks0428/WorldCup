@@ -1,14 +1,19 @@
 import { makeRng } from './seededRandom'
 
-const KEY = 'ltt_daily_done'
+// Per-competition completion key. World Cup keeps the legacy key so existing
+// "done today" state survives; Premier League gets its own.
+function doneKey(competition) {
+  return competition === 'pl' ? 'ltt_daily_done_pl' : 'ltt_daily_done'
+}
 
 // The daily challenge's difficulty rotates each day. It's derived from the date
-// so everyone gets the same difficulty on the same day (and it's known up-front
-// for display). Salted so it doesn't correlate with the spin seed (todaySeed).
+// (so everyone gets the same difficulty on a given day) and salted by
+// competition so World Cup and Premier League rotate independently — each is its
+// own "different difficulty every day" sequence.
 export const DAILY_DIFFICULTIES = ['classic', 'expert', 'hardcore']
 
-export function dailyDifficulty(date = new Date().toISOString().split('T')[0]) {
-  const r = makeRng('difficulty|' + date)()
+export function dailyDifficulty(competition = 'wc', date = new Date().toISOString().split('T')[0]) {
+  const r = makeRng(`difficulty|${competition}|${date}`)()
   return DAILY_DIFFICULTIES[Math.floor(r * DAILY_DIFFICULTIES.length)]
 }
 
@@ -18,13 +23,13 @@ export const DIFFICULTY_LABEL = {
   hardcore: '💀 Hardcore',
 }
 
-// Records the date string of the last completed daily challenge.
-export function markDailyDone() {
-  try { localStorage.setItem(KEY, new Date().toISOString().split('T')[0]) } catch {}
+// Records the date string of the last completed daily challenge for a competition.
+export function markDailyDone(competition = 'wc') {
+  try { localStorage.setItem(doneKey(competition), new Date().toISOString().split('T')[0]) } catch {}
 }
 
-export function isDailyDoneToday() {
-  try { return localStorage.getItem(KEY) === new Date().toISOString().split('T')[0] }
+export function isDailyDoneToday(competition = 'wc') {
+  try { return localStorage.getItem(doneKey(competition)) === new Date().toISOString().split('T')[0] }
   catch { return false }
 }
 

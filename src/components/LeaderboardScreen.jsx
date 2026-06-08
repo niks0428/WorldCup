@@ -179,7 +179,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
           {[['wc', '🌍 World Cup'], ['pl', '🦁 Premier League']].map(([id, label]) => (
             <button
               key={id}
-              onClick={() => { setComp(id); if (id === 'pl' && timeFilter === 'daily') setTimeFilter('alltime') }}
+              onClick={() => setComp(id)}
               className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${
                 comp === id
                   ? (id === 'pl' ? 'bg-sky-400 text-gray-900' : 'bg-yellow-400 text-gray-900')
@@ -222,7 +222,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
           {/* Time filter */}
           {board === 'scores' && !challengeSeed && (
             <div className="flex gap-2 mb-3">
-              {TIME_TABS.filter(t => t.id !== 'daily' || !isPL).map(t => (
+              {TIME_TABS.map(t => (
                 <button
                   key={t.id}
                   onClick={() => setTimeFilter(t.id)}
@@ -291,17 +291,14 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
                 myName={myName}
                 emptyMsg="No challenge wins yet — be the first!"
               />
-              {/* Daily challenge is World Cup only — no daily-streak board for PL */}
-              {!isPL && (
-                <StreakTable
-                  title="⭐ Daily Challenge Streaks"
-                  subtitle="Most days played in a row"
-                  rows={dailyStreaks}
-                  valueKey="streak"
-                  myName={myName}
-                  emptyMsg="No daily streaks yet — play today's challenge!"
-                />
-              )}
+              <StreakTable
+                title="⭐ Daily Challenge Streaks"
+                subtitle="Most days played in a row"
+                rows={dailyStreaks}
+                valueKey="streak"
+                myName={myName}
+                emptyMsg="No daily streaks yet — play today's challenge!"
+              />
             </div>
           )}
 

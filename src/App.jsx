@@ -101,6 +101,9 @@ export default function App() {
     }
   }, [])
 
+  // The daily streak is per competition — show the active one's.
+  useEffect(() => { setStreak(getStreak(competition)) }, [competition])
+
   function handleSelectCompetition(comp) {
     setCompetition(comp)
     setScreen('setup')
@@ -130,9 +133,9 @@ export default function App() {
     // Update streak for daily
     let updatedStreak = streak
     if (config?.mode === 'daily') {
-      updatedStreak = updateStreak()
+      updatedStreak = updateStreak(config.competition)
       setStreak(updatedStreak)
-      markDailyDone()
+      markDailyDone(config.competition)
     }
 
     // Save achievements

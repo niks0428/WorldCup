@@ -1,14 +1,18 @@
-const KEY = 'ltt_streak'
+// Daily-challenge day streak, tracked per competition. World Cup keeps the
+// legacy key; Premier League gets its own, so the two streaks are independent.
+function key(competition) {
+  return competition === 'pl' ? 'ltt_streak_pl' : 'ltt_streak'
+}
 
-export function getStreak() {
+export function getStreak(competition = 'wc') {
   try {
-    return JSON.parse(localStorage.getItem(KEY)) || { streak: 0, last: '' }
+    return JSON.parse(localStorage.getItem(key(competition))) || { streak: 0, last: '' }
   } catch { return { streak: 0, last: '' } }
 }
 
-export function updateStreak() {
+export function updateStreak(competition = 'wc') {
   const today = new Date().toISOString().split('T')[0]
-  const data = getStreak()
+  const data = getStreak(competition)
   if (data.last === today) return data  // already played today, don't double-count
 
   const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
@@ -20,6 +24,6 @@ export function updateStreak() {
   const streak = continues ? data.streak + 1 : 1
 
   const updated = { streak, last: today }
-  localStorage.setItem(KEY, JSON.stringify(updated))
+  localStorage.setItem(key(competition), JSON.stringify(updated))
   return updated
 }

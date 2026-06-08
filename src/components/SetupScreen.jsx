@@ -71,7 +71,7 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
   const [showAllFormations, setShowAllFormations] = useState(false)
-  const [dailyDone] = useState(() => isDailyDoneToday())
+  const [dailyDone] = useState(() => isDailyDoneToday(competition))
   const [countdown, setCountdown] = useState(() => timeUntilNextDaily().label)
   const [muted, setMuted] = useState(() => isMuted())
   const [challengeStreak] = useState(() => getChallengeStreak(competition))
@@ -83,8 +83,8 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
   }, [dailyDone])
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
-  const todayDifficulty = dailyDifficulty()
-  const hasStreak = !isPL && streak?.streak > 0   // daily streak is World Cup only
+  const todayDifficulty = dailyDifficulty(competition)
+  const hasStreak = streak?.streak > 0
   const hasChallengeStreak = challengeStreak?.streak > 0
 
   return (
@@ -145,8 +145,8 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
       </div>
 
       <div className="w-full max-w-md space-y-4">
-        {/* Daily Challenge — World Cup only (shared daily seed is a WC concept) */}
-        {!isPL && (dailyDone ? (
+        {/* Daily Challenge — per competition, difficulty rotates daily */}
+        {dailyDone ? (
           <div className="w-full rounded-2xl border-2 border-gray-700 bg-gray-900 p-4 text-left">
             <div className="flex items-center justify-between">
               <div>
@@ -175,15 +175,13 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
               <span className="text-yellow-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
             </div>
           </button>
-        ))}
-
-        {!isPL && (
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-gray-800" />
-            <span className="text-gray-600 text-xs uppercase tracking-widest">or play your own</span>
-            <div className="flex-1 h-px bg-gray-800" />
-          </div>
         )}
+
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-gray-800" />
+          <span className="text-gray-600 text-xs uppercase tracking-widest">or play your own</span>
+          <div className="flex-1 h-px bg-gray-800" />
+        </div>
 
         {/* Mode */}
         <div>
