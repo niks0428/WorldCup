@@ -23,7 +23,8 @@ from playwright_stealth import Stealth
 BASE = "https://www.fifaindex.com"
 PL_LEAGUE = "13-england-premier-league-1"
 # FIFA editions on fifaindex. year = the edition's nominal year (07 -> 2007).
-EDITIONS = [f"fifa{e:02d}" for e in range(7, 25)]  # fifa07 .. fifa24
+# fifa07..fifa24, then EA Sports FC 25/26 (slugs fc25/fc26 → 2025/2026).
+EDITIONS = [f"fifa{e:02d}" for e in range(7, 25)] + ["fc25", "fc26"]
 
 # fifaindex club name -> our CLUB_META key (so crests resolve). Unmapped names
 # fall through unchanged (ClubCrest monograms them).
@@ -85,8 +86,9 @@ def wait_table(pg, tries=22):
     return False
 
 def edition_year(ed):
-    n = int(ed.replace("fifa", ""))
-    return 2000 + n
+    # Works for 'fifa07'..'fifa24' and 'fc25'/'fc26' — take the digits.
+    import re as _re
+    return 2000 + int(_re.sub(r"\D", "", ed))
 
 def scrape_team(pg, url, club, year):
     pg.goto(BASE + url, wait_until="domcontentloaded", timeout=60000)
@@ -137,6 +139,15 @@ def scrape_edition(pg, ed):
 def main():
     eds = sys.argv[1:] or EDITIONS
     dst = os.path.join(os.path.dirname(__file__), "src", "data", "players_pl.json")
+    # Merge into any existing data: keep editions we're NOT re-scraping, replace
+    # the ones we are. Lets us add fc25/fc26 without re-pulling fifa07-24.
+    scrape_years = {edition_year(e) for e in eds}
+    base = []
+    if os.path.exists(dst):
+        try:
+            base = [p for p in json.load(open(dst)) if p.get("year") not in scrape_years]
+        except Exception:
+            base = []
     all_players = []
     with Stealth().use_sync(sync_playwright()) as p:
         b = p.chromium.launch(executable_path="/usr/bin/chromium", headless=False,
@@ -151,11 +162,14 @@ def main():
             # Persist after every edition so a long run survives interruption.
             if all_players:
                 with open(dst, "w") as f:
-                    json.dump(all_players, f, ensure_ascii=False)
+                    json.dump(base + all_players, f, ensure_ascii=False)
         b.close()
     if all_players:
-        clubs = sorted({(p["nation"], p["year"]) for p in all_players})
-        print(f"\nWrote {len(all_players)} players, {len(clubs)} club-editions -> {dst}", flush=True)
+        merged = base + all_players
+        with open(dst, "w") as f:
+            json.dump(merged, f, ensure_ascii=False)
+        clubs = sorted({(p["nation"], p["year"]) for p in merged})
+        print(f"\nWrote {len(merged)} players ({len(all_players)} new), {len(clubs)} club-editions -> {dst}", flush=True)
     else:
         print("\nNo players scraped — file left unchanged.", flush=True)
 
