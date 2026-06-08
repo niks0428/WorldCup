@@ -493,16 +493,25 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
                     <span className="w-7 text-right tabular-nums">Pts</span>
                     <span className="w-8 text-right tabular-nums">GD</span>
                   </div>
-                  {run.table.map(row => (
+                  {run.table.map(row => {
+                    const zoneCls = row.pos <= 4 ? 'text-sky-400'
+                      : row.pos === 5 ? 'text-orange-400'
+                      : row.pos <= 7 ? 'text-violet-400'
+                      : row.pos >= 18 ? 'text-red-400'
+                      : 'text-gray-500'
+                    const borderCls = row.pos <= 4 ? 'border-l-2 border-sky-400'
+                      : row.pos === 5 ? 'border-l-2 border-orange-400'
+                      : row.pos <= 7 ? 'border-l-2 border-violet-400'
+                      : row.pos >= 18 ? 'border-l-2 border-red-400'
+                      : 'border-l-2 border-transparent'
+                    return (
                     <div
                       key={row.name}
-                      className={`flex items-center gap-2 text-xs rounded px-1 py-1 ${
-                        row.isPlayer ? 'bg-yellow-400/10 border border-yellow-400/25' : ''
+                      className={`flex items-center gap-2 text-xs rounded px-1 py-1 ${borderCls} ${
+                        row.isPlayer ? 'bg-yellow-400/10 border-yellow-400/40' : ''
                       }`}
                     >
-                      <span className={`w-4 text-right shrink-0 tabular-nums ${
-                        row.pos <= 4 ? 'text-sky-400' : row.pos >= 18 ? 'text-red-400' : 'text-gray-500'
-                      }`}>{row.pos}</span>
+                      <span className={`w-4 text-right shrink-0 tabular-nums ${zoneCls}`}>{row.pos}</span>
                       <span className="w-4 h-3 inline-flex shrink-0 rounded-sm overflow-hidden">
                         {!row.isPlayer && <FlagImg nation={row.name} className="w-full h-full" />}
                       </span>
@@ -518,8 +527,10 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
                         {row.gd >= 0 ? '+' : ''}{row.gd}
                       </span>
                     </div>
-                  ))}
-                  <p className="text-[9px] text-gray-600 pt-1">🔵 top 4 = UCL · 🔴 bottom 3 = relegated</p>
+                  )})}
+                  <p className="text-[9px] text-gray-600 pt-1 leading-relaxed">
+                    🔵 UCL · 🟠 UEL · 🟣 UECL · 🔴 relegated
+                  </p>
                 </div>
               )}
             </div>
