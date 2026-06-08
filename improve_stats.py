@@ -43,6 +43,25 @@ POS_DEFAULT = {
 
 def clamp(v): return max(1, min(99, int(round(v))))
 
+# Position-average stat shape + overall, used to detect which ORIGINAL rows are
+# "flat" (never really curated) vs genuinely hand-tuned (leave those alone).
+POSAVG = {
+ 'GK':(54,13,45,38,20,74),'CB':(68,33,60,57,83,78),'RB':(78,47,65,65,73,69),'LB':(77,45,64,65,72,68),
+ 'RWB':(80,47,65,66,70,69),'LWB':(80,54,62,62,60,70),'CDM':(66,54,74,69,77,75),'CM':(70,66,78,75,62,70),
+ 'CAM':(76,77,81,83,43,65),'RM':(75,66,74,74,45,66),'LM':(76,54,67,70,57,66),'RW':(84,73,71,81,33,64),
+ 'LW':(85,75,72,83,32,65),'ST':(79,82,66,76,29,73),
+}
+POSAVG_OVR = {'GK':84,'CB':83,'RB':81,'LB':80,'RWB':80,'LWB':79,'CDM':83,'CM':83,'CAM':85,'RM':82,'LM':79,'RW':82,'LW':83,'ST':84}
+
+def is_flat(row):
+    """True if the row's stats match the flat position-average pattern (i.e. it
+    was generated, not hand-curated). Distinctive curated rows return False."""
+    pos = row['positions'][0]
+    if pos not in POSAVG: return False
+    d = row['overall'] - POSAVG_OVR[pos]
+    dev = sum(abs(row[FACE[i]] - (POSAVG[pos][i] + d)) for i in range(6)) / 6
+    return dev < 3
+
 def apply_arch(row, archetype, overall):
     off = ARCH[archetype]
     row['overall'] = overall
@@ -75,7 +94,6 @@ ICONS = {
  ('Fabregas',2010):     (85,66,76,89,83,68,66),
  ('Rodri',2022):        (86,66,75,85,80,85,84),
  ('Bruno Fernandes',2024):(86,74,86,87,84,66,74),
- ('Trezeguet',2000):    (84,80,87,66,80,32,78),
  ('Nainggolan',2016):   (84,76,80,80,80,82,84),
 }
 
@@ -178,13 +196,15 @@ def main():
     for cur, bak in BAKS.items():
         if not os.path.exists(bak):
             raise SystemExit(f'backup missing: {bak} (cannot identify added rows)')
-        orig = {(p['name'], p['year'], p['nation']) for p in json.load(open(bak))}
+        backup = json.load(open(bak))
+        orig = {(p['name'], p['year'], p['nation']) for p in backup}
+        # ORIGINAL rows that are "flat" (generated, not curated) — safe to reshape.
+        flat_orig = {(p['name'], p['year'], p['nation']) for p in backup if is_flat(p)}
         data = json.load(open('src/data/' + cur))
-        n_icon = n_cur = n_def = 0
+        n_icon = n_cur = n_def = n_keep = 0
         for row in data:
             key3 = (row['name'], row['year'], row['nation'])
-            if key3 in orig:
-                continue  # original hand-curated row — leave alone
+            is_orig = key3 in orig
             k = (row['name'], row['year'])
             if k in ICONS:
                 ov, *st = ICONS[k]
@@ -196,12 +216,15 @@ def main():
                 ov = ov if ov is not None else row['overall']
                 arch = arch or POS_DEFAULT.get(row['positions'][0], 'box_to_box')
                 apply_arch(row, arch, ov); n_cur += 1
-            else:
+            elif (not is_orig) or (key3 in flat_orig):
+                # added players + flat originals -> archetype reshape
                 arch = POS_DEFAULT.get(row['positions'][0], 'box_to_box')
                 apply_arch(row, arch, row['overall']); n_def += 1
+            else:
+                n_keep += 1  # distinctive hand-curated original — preserved
         json.dump(data, open('src/data/' + cur, 'w'), ensure_ascii=False, separators=(',', ':'))
-        manifest[cur] = {'icons': n_icon, 'curated': n_cur, 'default': n_def}
-        print(f'{cur}: icons={n_icon} curated={n_cur} default_archetype={n_def}')
+        manifest[cur] = {'icons': n_icon, 'curated': n_cur, 'default': n_def, 'kept_original': n_keep}
+        print(f'{cur}: icons={n_icon} curated={n_cur} reshaped={n_def} kept_distinctive_original={n_keep}')
     json.dump({k: sorted([f"{n}|{y}|{na}" for (n, y, na) in
               ({(p['name'], p['year'], p['nation']) for p in json.load(open('src/data/'+k))} -
                {(p['name'], p['year'], p['nation']) for p in json.load(open(v))})])
