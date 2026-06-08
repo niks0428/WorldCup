@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import HomeScreen from './components/HomeScreen'
 import SetupScreen from './components/SetupScreen'
 import DraftScreen from './components/DraftScreen'
 import ResultScreen, { decodeSquad } from './components/ResultScreen'
@@ -16,6 +17,7 @@ import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
 import euroA from './data/players_euro_a.json'
 import euroB from './data/players_euro_b.json'
+import plPlayers from './data/players_pl.json'
 import { randomSeed } from './lib/seededRandom'
 import { getStreak, updateStreak } from './lib/streak'
 import { setLastChallengeSeed } from './lib/challengeStreak'
@@ -23,10 +25,11 @@ import { markDailyDone } from './lib/daily'
 import { saveToHistory } from './lib/history'
 import { calculateTeamScore } from './utils/scoring'
 import { simulateTournament } from './utils/tournament'
+import { simulateLeague } from './utils/league'
 import { getAchievements, saveAchievements } from './lib/achievements'
 import './index.css'
 
-const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
+const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB, ...plPlayers]
 
 function buildPlayerLookup() {
   const map = {}
@@ -63,7 +66,8 @@ function challengeFromHash(hash) {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState('setup')
+  const [screen, setScreen] = useState('home')
+  const [competition, setCompetition] = useState('wc')
   const [config, setConfig] = useState(null)
   const [finalSlots, setFinalSlots] = useState(null)
   const [leaderboardSeed, setLeaderboardSeed] = useState(null)
@@ -77,8 +81,12 @@ export default function App() {
     const hash = window.location.hash
     const shared = squadFromHash(hash)
     if (shared) {
+      // A PL squad stores the club name in `nation`; detect it so the result
+      // screen runs the league sim instead of the cup.
+      const comp = shared.slots.some(s => s.player?.tournament === 'PL') ? 'pl' : 'wc'
+      setCompetition(comp)
       setFinalSlots(shared.slots)
-      setConfig({ formation: shared.formation, mode: shared.mode })
+      setConfig({ formation: shared.formation, mode: shared.mode, competition: comp })
       setScreen('result')
       return
     }
@@ -86,8 +94,13 @@ export default function App() {
     if (challenge) { setLastChallengeSeed(challenge.seed); setConfig(challenge); setScreen('draft') }
   }, [])
 
+  function handleSelectCompetition(comp) {
+    setCompetition(comp)
+    setScreen('setup')
+  }
+
   function handleSetupDone(cfg) {
-    setConfig({ ...cfg, seed: cfg.seed || randomSeed() })
+    setConfig({ ...cfg, competition, seed: cfg.seed || randomSeed() })
     setSkipsUsed(0)
     setScreen('draft')
   }
@@ -99,10 +112,13 @@ export default function App() {
     setFinalSlots(slots)
     setSkipsUsed(skips)
 
-    // Save to history
+    // Save to history. Premier League is a 38-game season; World Cup is a cup.
     const score = calculateTeamScore(slots)
-    const run = simulateTournament(slots, score, config.seed)
-    saveToHistory({ slots, formation: config.formation, mode: config.mode, score, tier: run.tier, seed: config.seed })
+    const isPL = config.competition === 'pl'
+    const run = isPL
+      ? simulateLeague(slots, score, config.seed)
+      : simulateTournament(slots, score, config.seed)
+    saveToHistory({ slots, formation: config.formation, mode: config.mode, score, tier: run.tier, seed: config.seed, competition: config.competition })
 
     // Update streak for daily
     let updatedStreak = streak
@@ -130,7 +146,7 @@ export default function App() {
     setLeaderboardSeed(null); setLeaderboardGroup(null)
     setHistoryEntry(null); setSkipsUsed(0)
     window.location.hash = ''
-    setScreen('setup')
+    setScreen('home')
   }
 
   function handleLeaderboard(seed, groupCode) {
@@ -147,8 +163,10 @@ export default function App() {
       const saved = entry.players.find(p => p.slotId === slot.id)
       return { ...slot, player: saved ? saved.player : null }
     })
+    const comp = entry.competition || (slots.some(s => s.player?.tournament === 'PL') ? 'pl' : 'wc')
+    setCompetition(comp)
     setFinalSlots(slots)
-    setConfig({ formation: entry.formation, mode: entry.mode, seed: entry.seed })
+    setConfig({ formation: entry.formation, mode: entry.mode, seed: entry.seed, competition: comp })
     setHistoryEntry(entry)
     setScreen('result')
   }
@@ -157,9 +175,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
+      {screen === 'home' && (
+        <HomeScreen onSelect={handleSelectCompetition} />
+      )}
       {screen === 'setup' && (
         <SetupScreen
+          competition={competition}
           onStart={handleSetupDone}
+          onBack={() => setScreen('home')}
           onLeaderboard={() => handleLeaderboard(null, currentGroup?.code)}
           onPrivacy={() => setScreen('privacy')}
           onHistory={() => setScreen('history')}
@@ -178,7 +201,7 @@ export default function App() {
         <RevealScreen slots={finalSlots} onDone={() => setScreen('run')} />
       )}
       {screen === 'run' && (
-        <RunRevealScreen slots={finalSlots} seed={config?.seed} onDone={() => setScreen('result')} />
+        <RunRevealScreen slots={finalSlots} seed={config?.seed} competition={competition} onDone={() => setScreen('result')} />
       )}
       {screen === 'result' && (
         <ResultScreen
@@ -186,6 +209,7 @@ export default function App() {
           formation={config?.formation}
           mode={config?.mode}
           seed={config?.seed}
+          competition={competition}
           config={configWithSkips}
           streak={streak.streak}
           groupCode={currentGroup?.code}

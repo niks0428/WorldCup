@@ -5,25 +5,42 @@ import wcNew from '../data/players_wc_new.json'
 import wcOld from '../data/players_wc_old.json'
 import euroA from '../data/players_euro_a.json'
 import euroB from '../data/players_euro_b.json'
+import plPlayers from '../data/players_pl.json'
 import formations from '../data/formations.json'
 import { getFitMultiplier, getPlayablePositions } from '../utils/compatibility'
 import PitchView from './PitchView'
 import { FlagImg, FLAG_EMOJI } from '../lib/flags'
 import { playSpin, playTick, playPick, playPlace } from '../lib/sound'
 
-const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB]
+const allPlayers = [...wcNew, ...wcOld, ...euroA, ...euroB, ...plPlayers]
 
 // Re-export for components that import FLAG_MAP from here
 export { FLAG_EMOJI as FLAG_MAP } from '../lib/flags'
 
-function buildPairs() {
+// Players for the chosen competition: Premier League clubs, or World Cup +
+// Euro nations. Keeps the two modes' draft pools fully separate.
+function poolFor(competition) {
+  return competition === 'pl'
+    ? allPlayers.filter(p => p.tournament === 'PL')
+    : allPlayers.filter(p => p.tournament === 'WC' || p.tournament === 'EURO')
+}
+
+// The spin reel cycles team×edition pairs (nation×year for WC, club×FIFA for PL).
+function buildPairs(pool) {
   const seen = new Set()
   const pairs = []
-  for (const p of allPlayers) {
+  for (const p of pool) {
     const key = `${p.nation}|${p.year}|${p.tournament}`
     if (!seen.has(key)) { seen.add(key); pairs.push({ nation: p.nation, year: p.year, tournament: p.tournament }) }
   }
   return pairs
+}
+
+// Reel/label text for a team×edition pair. PL shows the FIFA edition; WC/Euro
+// shows the tournament + year.
+function periodLabel(pair) {
+  if (pair.tournament === 'PL') return `FIFA ${String(pair.year).slice(2)}`
+  return `${pair.tournament === 'EURO' ? 'EURO' : 'WC'} ${pair.year}`
 }
 
 function shuffle(arr) {
@@ -39,7 +56,6 @@ function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-const ALL_PAIRS = buildPairs()
 const ITEM_H = 60
 // Per-mode allowances. Classic is the most forgiving; expert is leaner (fewer
 // skips, no bench); hardcore has neither.
@@ -112,22 +128,23 @@ function PlayerPickCard({ player, fitLabel, fitCls, onClick, hideStats }) {
 }
 
 function ReelItem({ pair }) {
-  const flag = FLAG_EMOJI[pair.nation] || '🏴'
-  const comp = pair.tournament === 'EURO' ? 'EURO' : 'WC'
+  const isPL = pair.tournament === 'PL'
   return (
     <div className="flex items-center justify-center gap-2 text-white font-bold select-none" style={{ height: ITEM_H }}>
-      <span className="text-3xl">{flag}</span>
+      {isPL
+        ? <span className="w-9 h-9 inline-flex shrink-0"><FlagImg nation={pair.nation} className="w-full h-full" /></span>
+        : <span className="text-3xl">{FLAG_EMOJI[pair.nation] || '🏴'}</span>}
       <div className="text-center leading-tight">
         <div className="text-sm">{pair.nation}</div>
-        <div className="text-xs font-normal text-yellow-400">{comp} {pair.year}</div>
+        <div className="text-xs font-normal text-yellow-400">{periodLabel(pair)}</div>
       </div>
     </div>
   )
 }
 
-function SlotReel({ finalPair, onDone }) {
+function SlotReel({ finalPair, allPairs, onDone }) {
   const PRE = 28
-  const [items] = useState(() => [...shuffle(ALL_PAIRS).slice(0, PRE), finalPair])
+  const [items] = useState(() => [...shuffle(allPairs).slice(0, PRE), finalPair])
   const startY = ITEM_H
   const endY = -(PRE * ITEM_H) + ITEM_H
   const [y, setY] = useState(startY)
@@ -311,6 +328,9 @@ export default function DraftScreen({ config, onComplete }) {
   // Daily challenges carry a `difficulty` (classic/expert/hardcore) that drives
   // the draft rules, while config.mode stays 'daily' for leaderboard/streak.
   const mode = config.difficulty || config.mode
+  const competition = config.competition || 'wc'
+  const pool = useMemo(() => poolFor(competition), [competition])
+  const pairs = useMemo(() => buildPairs(pool), [pool])
   const isHardcore = mode === 'hardcore'
   const isClassic = mode === 'classic'
   const maxSkips = SKIPS_BY_MODE[mode] ?? 3
@@ -327,7 +347,7 @@ export default function DraftScreen({ config, onComplete }) {
 
   const [slots, setSlots] = useState(initialSlots)
   const [spinQueue] = useState(() =>
-    config.seed ? seededShuffle(ALL_PAIRS, config.seed) : shuffle(ALL_PAIRS)
+    config.seed ? seededShuffle(pairs, config.seed) : shuffle(pairs)
   )
   const [spinIndex, setSpinIndex] = useState(0)
   // phases: idle | spinning | picking | placing
@@ -388,7 +408,7 @@ export default function DraftScreen({ config, onComplete }) {
 
   function handleSpinDone() {
     if (!currentPair || phase === 'picking') return  // already resolved
-    const pool = allPlayers.filter(
+    const squadPool = pool.filter(
       p => p.nation === currentPair.nation &&
            p.year === currentPair.year &&
            p.tournament === currentPair.tournament &&
@@ -398,15 +418,15 @@ export default function DraftScreen({ config, onComplete }) {
     let available
     if (isHardcore) {
       // Show players that can play in the assigned position (0.85+), fall back to all if none
-      const compatible = pool.filter(p => getFitMultiplier(assignedSlot.position, p.positions) >= 0.85)
-      available = compatible.length > 0 ? compatible : pool
+      const compatible = squadPool.filter(p => getFitMultiplier(assignedSlot.position, p.positions) >= 0.85)
+      available = compatible.length > 0 ? compatible : squadPool
     } else if (benchSlots.some(s => !s.player)) {
       // While any substitute slot is open, every player is pickable — anyone
       // can take a bench spot regardless of position.
-      available = pool
+      available = squadPool
     } else {
       const emptyPitch = getEmptyPitchSlots()
-      available = pool.filter(p =>
+      available = squadPool.filter(p =>
         emptyPitch.some(s => getFitMultiplier(s.position, p.positions) >= 0.85) ||
         // Classic: also offer players who fit a taken slot whose occupant can move.
         (isClassic && slots.some(s => s.player
@@ -703,7 +723,7 @@ export default function DraftScreen({ config, onComplete }) {
           )}
 
           {phase === 'spinning' && currentPair && (
-            <SlotReel key={reelKey} finalPair={currentPair} onDone={handleSpinDone} />
+            <SlotReel key={reelKey} finalPair={currentPair} allPairs={pairs} onDone={handleSpinDone} />
           )}
 
           {(phase === 'picking' || phase === 'placing') && currentPair && (
@@ -711,7 +731,7 @@ export default function DraftScreen({ config, onComplete }) {
               <div className="flex justify-center"><span className="w-10 h-7 rounded overflow-hidden inline-flex shadow"><FlagImg nation={currentPair.nation} className="w-full h-full object-cover" /></span></div>
               <div className="text-white font-bold text-sm">{currentPair.nation}</div>
               <div className="text-yellow-400 text-xs">
-                {currentPair.tournament === 'EURO' ? 'EURO' : 'WC'} {currentPair.year}
+                {periodLabel(currentPair)}
               </div>
               {isHardcore && assignedSlot && (
                 <div className="mt-1 text-xs text-red-400 font-bold">Must fill: {assignedSlot.position}</div>

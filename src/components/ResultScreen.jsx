@@ -1,5 +1,6 @@
 import { calculateTeamScore, calculateGroupScores } from '../utils/scoring'
 import { simulateTournament } from '../utils/tournament'
+import { simulateLeague } from '../utils/league'
 import { getAchievements } from '../lib/achievements'
 import PitchView from './PitchView'
 import { useState, useEffect, useRef } from 'react'
@@ -10,6 +11,11 @@ import { playResult } from '../lib/sound'
 import { buildShareImage } from '../lib/shareImage'
 import { validateName } from '../lib/nameFilter'
 import { recordChallengeResult, getChallengeStreak } from '../lib/challengeStreak'
+
+function ordinal(n) {
+  const s = ['th', 'st', 'nd', 'rd'], v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
 
 function b64Encode(str) {
   return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p) => String.fromCharCode(parseInt(p, 16))))
@@ -61,10 +67,11 @@ const NAME_KEY = 'ltt_player_name'
 function getSavedName() { try { return localStorage.getItem(NAME_KEY) || '' } catch { return '' } }
 function saveName(n) { try { localStorage.setItem(NAME_KEY, n) } catch {} }
 
-export default function ResultScreen({ slots, formation, mode, seed, config, streak, groupCode, onRestart, onLeaderboard }) {
+export default function ResultScreen({ slots, formation, mode, seed, competition = 'wc', config, streak, groupCode, onRestart, onLeaderboard }) {
+  const isPL = competition === 'pl'
   const score = calculateTeamScore(slots)
   const groups = calculateGroupScores(slots)
-  const run = simulateTournament(slots, score, seed)
+  const run = isPL ? simulateLeague(slots, score, seed) : simulateTournament(slots, score, seed)
   const tier = run.tierMeta
   const achievements = getAchievements(slots, config || { mode })
   const [copyState, setCopyState] = useState('idle')
@@ -115,7 +122,10 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   useEffect(() => {
     // Celebrate based on the result reached, not raw squad score (an underdog
     // that lifts the trophy still earns the gold confetti).
-    const cel = { 'World Cup Winners': 95, 'Finalists': 84, 'Semi-finalists': 76 }[run.tier] ?? 60
+    const cel = {
+      'World Cup Winners': 95, 'Finalists': 84, 'Semi-finalists': 76,
+      'Invincibles': 99, 'Champions': 95, 'Title Race': 84, 'Champions League': 76,
+    }[run.tier] ?? 60
     const t = setTimeout(() => { fireConfetti(cel); playResult(cel) }, 400)
     return () => clearTimeout(t)
   }, [])
@@ -153,7 +163,11 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
 
   function handleShareText() {
     const url = buildSquadUrl(slots, formation, mode)
-    const text = `I built a World Cup XI that reached the ${tier.label}. ${tier.emoji} Lift the Trophy — ${url}`
+    const text = isPL
+      ? (run.perfect
+          ? `38-0-0. I built a Premier League XI and went UNBEATEN — Invincibles. 🏆 Lift the Trophy — ${url}`
+          : `I built a Premier League XI and finished ${tier.label} (${run.won}W ${run.drawn}D ${run.lost}L). ${tier.emoji} Lift the Trophy — ${url}`)
+      : `I built a World Cup XI that reached the ${tier.label}. ${tier.emoji} Lift the Trophy — ${url}`
     navigator.clipboard.writeText(text).then(() => {
       setCopyState('text'); setTimeout(() => setCopyState('idle'), 2500)
     })
@@ -285,10 +299,36 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
             </div>
           </div>
 
-          {/* Tournament run — match by match */}
+          {/* Run — Premier League season or World Cup cup run */}
           <div className="bg-gray-800 rounded-2xl p-4 mb-6">
-            <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Tournament Run</p>
-            <div className="space-y-1.5">
+            <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">{isPL ? 'The Season' : 'Tournament Run'}</p>
+
+            {isPL && (
+              <div className="grid grid-cols-4 gap-2 text-center mb-3">
+                <div>
+                  <div className="text-white font-extrabold text-lg tabular-nums">{ordinal(run.position)}</div>
+                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Finish</div>
+                </div>
+                <div>
+                  <div className="text-yellow-400 font-extrabold text-lg tabular-nums">{run.points}</div>
+                  <div className="text-[9px] uppercase tracking-wider text-gray-500">Points</div>
+                </div>
+                <div>
+                  <div className="font-extrabold text-lg tabular-nums text-white">
+                    <span className="text-green-400">{run.won}</span>-<span className="text-yellow-400">{run.drawn}</span>-<span className="text-red-400">{run.lost}</span>
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wider text-gray-500">W-D-L</div>
+                </div>
+                <div>
+                  <div className="text-white font-extrabold text-lg tabular-nums">
+                    {run.goalsFor - run.goalsAgainst >= 0 ? '+' : ''}{run.goalsFor - run.goalsAgainst}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wider text-gray-500">GD</div>
+                </div>
+              </div>
+            )}
+
+            <div className={`space-y-1.5 ${isPL ? 'max-h-64 overflow-y-auto pr-1' : ''}`}>
               {run.matches.map((m, i) => {
                 const chipCls = m.result === 'W'
                   ? 'bg-green-500/20 text-green-400'
@@ -297,9 +337,11 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
                     : 'bg-yellow-400/20 text-yellow-400'
                 return (
                   <div key={i} className="flex items-center gap-2 text-sm">
-                    <span className="text-[10px] text-gray-500 w-[5.5rem] shrink-0 leading-tight">{m.stage}</span>
-                    <span className="w-5 h-3.5 rounded-sm overflow-hidden inline-flex shrink-0 shadow-sm">
-                      <FlagImg nation={m.opponent} className="w-full h-full object-cover" />
+                    <span className="text-[10px] text-gray-500 w-[5.5rem] shrink-0 leading-tight">
+                      {isPL ? `MD ${i + 1} · ${m.home ? 'H' : 'A'}` : m.stage}
+                    </span>
+                    <span className="w-5 h-3.5 inline-flex shrink-0">
+                      <FlagImg nation={m.opponent} className="w-full h-full" />
                     </span>
                     <span className="text-gray-300 flex-1 truncate">{m.opponent}</span>
                     <span className="text-white font-bold tabular-nums shrink-0">{m.gf}–{m.ga}</span>
@@ -310,11 +352,13 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
                 )
               })}
             </div>
-            {run.matches.some(m => m.pens) && (
+
+            {!isPL && run.matches.some(m => m.pens) && (
               <p className="text-[10px] text-gray-500 mt-2">
                 {run.matches.filter(m => m.pens).map(m => `${m.stage} decided on penalties`).join(' · ')}
               </p>
             )}
+
             <div className="mt-3 pt-3 border-t border-gray-700 grid grid-cols-3 gap-2 text-center">
               <div>
                 <div className="text-green-400 font-extrabold text-lg tabular-nums">{run.goalsFor}</div>

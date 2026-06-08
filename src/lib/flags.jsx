@@ -1,3 +1,6 @@
+import { CLUB_META } from '../data/clubs'
+import { ClubCrest } from './crests'
+
 const ISO = {
   Argentina: 'ar', Australia: 'au', Belgium: 'be', Brazil: 'br',
   Bulgaria: 'bg', Cameroon: 'cm', Colombia: 'co', Croatia: 'hr',
@@ -36,7 +39,11 @@ export function flagUrl(nation) {
   return code ? `https://flagcdn.com/w40/${code}.png` : null
 }
 
+// Premier League "nations" are actually clubs (the PL data stores the club name
+// in the `nation` field). When the name is a known club, render its crest
+// instead of a flag — so every FlagImg call site supports PL mode unchanged.
 export function FlagImg({ nation, className = 'w-full h-full', alt }) {
+  if (CLUB_META[nation]) return <ClubCrest club={nation} className={className} alt={alt} />
   const url = flagUrl(nation)
   if (!url) return <span className="text-lg">🏴</span>
   return (

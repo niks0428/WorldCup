@@ -66,7 +66,8 @@ const MODES = [
   { id: 'hardcore', label: 'Hardcore', badge: '💀', desc: 'Random position assigned. No stats, no skips. Stats revealed at the end.' },
 ]
 
-export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, onChallenges, streak, currentGroup }) {
+export default function SetupScreen({ competition = 'wc', onStart, onBack, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, onChallenges, streak, currentGroup }) {
+  const isPL = competition === 'pl'
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
   const [showAllFormations, setShowAllFormations] = useState(false)
@@ -88,6 +89,15 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10 relative">
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 h-10 px-3 rounded-full border border-gray-700 hover:border-gray-500 text-sm text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+          title="Change competition"
+        >
+          ← Back
+        </button>
+      )}
       <button
         onClick={() => setMuted(toggleMuted())}
         className="absolute top-4 right-4 w-10 h-10 rounded-full border border-gray-700 hover:border-gray-500 text-lg flex items-center justify-center transition-colors"
@@ -103,6 +113,13 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
           <span className="block text-2xl font-light tracking-[0.25em] text-yellow-400/80 uppercase">Lift the</span>
           <span className="block text-5xl md:text-6xl font-extrabold tracking-tight">Trophy</span>
         </h1>
+
+        <div className={`inline-flex items-center gap-1.5 mt-3 rounded-full px-3 py-1 border ${isPL ? 'bg-sky-400/15 border-sky-400/30' : 'bg-yellow-400/15 border-yellow-400/30'}`}>
+          <span className="text-base">{isPL ? '🦁' : '🌍'}</span>
+          <span className={`font-bold text-sm ${isPL ? 'text-sky-400' : 'text-yellow-400'}`}>
+            {isPL ? 'Premier League · go 38-0-0' : 'World Cup'}
+          </span>
+        </div>
 
         {/* Streak badges */}
         {(hasStreak || hasChallengeStreak) && (
@@ -128,8 +145,8 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
       </div>
 
       <div className="w-full max-w-md space-y-4">
-        {/* Daily Challenge */}
-        {dailyDone ? (
+        {/* Daily Challenge — World Cup only (shared daily seed is a WC concept) */}
+        {!isPL && (dailyDone ? (
           <div className="w-full rounded-2xl border-2 border-gray-700 bg-gray-900 p-4 text-left">
             <div className="flex items-center justify-between">
               <div>
@@ -158,13 +175,15 @@ export default function SetupScreen({ onStart, onLeaderboard, onPrivacy, onHisto
               <span className="text-yellow-400 text-xl group-hover:translate-x-1 transition-transform">→</span>
             </div>
           </button>
-        )}
+        ))}
 
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-gray-800" />
-          <span className="text-gray-600 text-xs uppercase tracking-widest">or play your own</span>
-          <div className="flex-1 h-px bg-gray-800" />
-        </div>
+        {!isPL && (
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-gray-800" />
+            <span className="text-gray-600 text-xs uppercase tracking-widest">or play your own</span>
+            <div className="flex-1 h-px bg-gray-800" />
+          </div>
+        )}
 
         {/* Mode */}
         <div>
