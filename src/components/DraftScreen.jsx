@@ -342,9 +342,14 @@ export default function DraftScreen({ config, onComplete }) {
     setPhase('idle')
   }
 
-  // Undo: clear a filled slot during idle phase
+  // Undo: clear a filled slot during idle phase. Removing a player to spin
+  // again is a re-roll, so it costs a skip — otherwise you could place, remove,
+  // and re-spin indefinitely, bypassing the skip limit. No undo in hardcore.
   function clearSlot(slotId) {
-    if (phase !== 'idle') return
+    if (phase !== 'idle' || isHardcore || skipsLeft <= 0) return
+    const target = slots.find(s => s.id === slotId)
+    if (!target || !target.player) return
+    setSkipsLeft(n => n - 1)
     setSlots(prev => prev.map(s => s.id === slotId ? { ...s, player: null } : s))
   }
 
@@ -536,7 +541,7 @@ export default function DraftScreen({ config, onComplete }) {
           assignedSlotId={isHardcore && phase === 'idle' ? assignedSlot?.id : null}
           onPlacePlayer={placePlayer}
           onClearSlot={clearSlot}
-          canClear={phase === 'idle'}
+          canClear={phase === 'idle' && !isHardcore && skipsLeft > 0}
         />
       </div>
     </div>

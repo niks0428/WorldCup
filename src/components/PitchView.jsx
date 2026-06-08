@@ -89,7 +89,7 @@ function PlayerCard({ slot, phase, compatible, assigned, onPlace, onClear, canCl
       disabled={!canClear}
       className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-0.5 group"
       style={{ left, top, cursor: canClear ? 'pointer' : 'default' }}
-      title={canClear ? 'Tap to remove' : undefined}
+      title={canClear ? 'Remove (uses a skip)' : undefined}
     >
       <div className={`relative w-11 h-11 rounded-full overflow-hidden border-2 shadow-lg bg-gray-800 transition-all ${canClear ? 'border-white group-hover:border-red-400 group-hover:scale-105' : 'border-white'}`}>
         <FlagImg nation={slot.player.nation} className="w-full h-full object-cover" />
