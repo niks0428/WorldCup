@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FlagImg } from '../lib/flags'
-import { calculateTeamScore, getTier } from '../utils/scoring'
+import { calculateTeamScore } from '../utils/scoring'
 import { simulateTournament } from '../utils/tournament'
 
 function MatchRevealCard({ match, revealed }) {
@@ -31,8 +31,7 @@ function MatchRevealCard({ match, revealed }) {
 
 export default function RunRevealScreen({ slots, seed, onDone }) {
   const score = calculateTeamScore(slots)
-  const tier = getTier(score)
-  const run = simulateTournament(slots, score, tier, seed)
+  const run = simulateTournament(slots, score, seed)
   const matches = run.matches
 
   const [revealedCount, setRevealedCount] = useState(0)

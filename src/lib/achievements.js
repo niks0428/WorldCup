@@ -1,4 +1,4 @@
-import { calculateGroupScores, calculateTeamScore, getTier } from '../utils/scoring'
+import { calculateGroupScores, calculateTeamScore } from '../utils/scoring'
 import { simulateTournament } from '../utils/tournament'
 
 export const ALL_ACHIEVEMENTS = [
@@ -68,7 +68,7 @@ function calcCheck(slots, config, g, score, run) {
     iron_curtain:    () => (g.DEF ?? 0) >= 90,
     maestros:        () => (g.MID ?? 0) >= 90,
     clinical:        () => (g.ATT ?? 0) >= 90,
-    group_exit:      () => score < 58,
+    group_exit:      () => run?.tier === 'Group Stage Exit',
     bus_parked:      () => (g.DEF ?? 0) >= 80 && (g.ATT ?? 99) < 65,
     leaky_defence:   () => (g.GK ?? 99) < 65 && (g.DEF ?? 99) < 65,
     pub_team:        () => score < 65 && score >= 55,
@@ -109,8 +109,7 @@ function calcCheck(slots, config, g, score, run) {
 export function getAchievements(slots, config) {
   const g = calculateGroupScores(slots)
   const score = calculateTeamScore(slots)
-  const tier = getTier(score)
-  const run = simulateTournament(slots, score, tier, config?.seed)
+  const run = simulateTournament(slots, score, config?.seed)
   return calcCheck(slots, config, g, score, run)
 }
 

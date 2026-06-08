@@ -1,4 +1,4 @@
-import { calculateTeamScore, getTier, calculateGroupScores } from '../utils/scoring'
+import { calculateTeamScore, calculateGroupScores } from '../utils/scoring'
 import { simulateTournament } from '../utils/tournament'
 import { getAchievements } from '../lib/achievements'
 import PitchView from './PitchView'
@@ -58,9 +58,9 @@ function saveName(n) { try { localStorage.setItem(NAME_KEY, n) } catch {} }
 
 export default function ResultScreen({ slots, formation, mode, seed, config, streak, groupCode, onRestart, onLeaderboard }) {
   const score = calculateTeamScore(slots)
-  const tier = getTier(score)
   const groups = calculateGroupScores(slots)
-  const run = simulateTournament(slots, score, tier, seed)
+  const run = simulateTournament(slots, score, seed)
+  const tier = run.tierMeta
   const achievements = getAchievements(slots, config || { mode })
   const [copyState, setCopyState] = useState('idle')
   const [name, setName] = useState(getSavedName)
@@ -86,7 +86,10 @@ export default function ResultScreen({ slots, formation, mode, seed, config, str
   }
 
   useEffect(() => {
-    const t = setTimeout(() => { fireConfetti(score); playResult(score) }, 400)
+    // Celebrate based on the result reached, not raw squad score (an underdog
+    // that lifts the trophy still earns the gold confetti).
+    const cel = { 'World Cup Winners': 95, 'Finalists': 84, 'Semi-finalists': 76 }[run.tier] ?? 60
+    const t = setTimeout(() => { fireConfetti(cel); playResult(cel) }, 400)
     return () => clearTimeout(t)
   }, [])
 

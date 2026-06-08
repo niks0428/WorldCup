@@ -13,7 +13,7 @@ function runForRow(s) {
       const data = decodeSquad(hash.slice(2))
       if (Array.isArray(data?.s)) slots = data.s.map(p => ({ player: { name: p?.n } }))
     }
-    return simulateTournament(slots, s.score, { label: s.tier }, s.seed)
+    return simulateTournament(slots, s.score, s.seed)
   } catch {
     // Never let one malformed/hostile row break the whole leaderboard render.
     return { goalsFor: 0, goalsAgainst: 0 }

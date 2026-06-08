@@ -19,7 +19,8 @@ import { randomSeed } from './lib/seededRandom'
 import { getStreak, updateStreak } from './lib/streak'
 import { markDailyDone } from './lib/daily'
 import { saveToHistory } from './lib/history'
-import { calculateTeamScore, getTier } from './utils/scoring'
+import { calculateTeamScore } from './utils/scoring'
+import { simulateTournament } from './utils/tournament'
 import { getAchievements, saveAchievements } from './lib/achievements'
 import './index.css'
 
@@ -92,8 +93,8 @@ export default function App() {
 
     // Save to history
     const score = calculateTeamScore(slots)
-    const tier = getTier(score)
-    saveToHistory({ slots, formation: config.formation, mode: config.mode, score, tier: tier.label, seed: config.seed })
+    const run = simulateTournament(slots, score, config.seed)
+    saveToHistory({ slots, formation: config.formation, mode: config.mode, score, tier: run.tier, seed: config.seed })
 
     // Update streak for daily
     let updatedStreak = streak

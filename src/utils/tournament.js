@@ -6,17 +6,23 @@ const STAGES = [
   'Round of 16', 'Quarter-final', 'Semi-final', 'Final',
 ]
 
-// How far each tier got: number of matches played + whether the final was won.
-const RUN = {
-  'World Cup Winners': { matches: 7, wonFinal: true },
-  'Finalists':         { matches: 7, wonFinal: false },
-  'Semi-finalists':    { matches: 6, wonFinal: false },
-  'Quarter-finalists': { matches: 5, wonFinal: false },
-  'Round of 16':       { matches: 4, wonFinal: false },
-  'Group Stage Exit':  { matches: 3, wonFinal: false },
+// Result tiers + which one you land on if you LOSE at knockout stage i (R16..Final).
+export const TIER_META = {
+  'World Cup Winners': { label: 'World Cup Winners', emoji: '🏆' },
+  'Finalists':         { label: 'Finalists',         emoji: '🥈' },
+  'Semi-finalists':    { label: 'Semi-finalists',    emoji: '🥉' },
+  'Quarter-finalists': { label: 'Quarter-finalists', emoji: '🎯' },
+  'Round of 16':       { label: 'Round of 16',       emoji: '🔵' },
+  'Group Stage Exit':  { label: 'Group Stage Exit',  emoji: '⚫' },
 }
+const KO_EXIT_TIER = ['Round of 16', 'Quarter-finalists', 'Semi-finalists', 'Finalists']
 
-// Opponent pools (only nations that have flags in lib/flags.jsx).
+// Opponent strength per stage (group games then R16/QF/SF/Final). The field gets
+// progressively stronger, so going all the way is hard — but never impossible.
+const GROUP_STR = [60, 64, 68]
+const KO_STR = [72, 75, 78, 81]
+
+// Opponent name pools (only nations that have flags in lib/flags.jsx).
 const GROUP_OPP = [
   'Australia', 'Japan', 'South Korea', 'USA', 'Mexico', 'Iceland', 'Senegal',
   'Ghana', 'Cameroon', 'Morocco', 'Poland', 'Sweden', 'Switzerland',
@@ -36,88 +42,75 @@ function shuffle(arr, rng) {
   return a
 }
 
-function pickOpponents(rng, n) {
-  const g = shuffle(GROUP_OPP, rng)
-  const e = shuffle(ELITE_OPP, rng)
-  const out = []
-  for (let i = 0; i < n; i++) out.push(i < 3 ? g[i] : e[i - 3])
-  return out
-}
-
-// Rough Poisson-ish goal count from an expected-goals figure (0..6).
+// Binomial(8, lambda/8) goal count — Poisson-ish, capped at 8.
 function goals(rng, lambda) {
   let g = 0
-  for (let i = 0; i < 6; i++) if (rng() < lambda / 6) g++
+  for (let i = 0; i < 8; i++) if (rng() < lambda / 8) g++
   return g
 }
 
-// Build a scoreline that honours the required outcome.
-function scoreFor(rng, str, outcome, pens) {
-  const atk = 0.8 + str * 2.0  // our expected goals: 0.8..2.8
-  const def = 1.8 - str * 1.3  // their expected goals: 1.8..0.5
-  let f = goals(rng, atk)
-  let a = goals(rng, def)
-
-  if (pens) {
-    // Drawn in regulation, decided on penalties — force a level score.
-    const lvl = Math.min(Math.max(f, a), 2)
-    return [lvl, lvl]
-  }
-  if (outcome === 'W' && f <= a) f = a + 1
-  else if (outcome === 'L' && a <= f) a = f + 1
-  else if (outcome === 'D') a = f
-  return [f, a]
+// Expected goals from the strength gap, then a scoreline. Stronger sides score
+// more and concede less, but any match can swing (the magic of the cup).
+function matchGoals(rng, S, opp) {
+  const d = S - opp
+  const our   = Math.max(0.25, Math.min(4.5, 1.35 * Math.exp(d * 0.030)))
+  const their = Math.max(0.25, Math.min(4.5, 1.35 * Math.exp(-d * 0.030)))
+  return [goals(rng, our), goals(rng, their)]
 }
 
 /**
- * Simulate the tournament run that produced this result.
- * Deterministic for a given squad, so it matches the team's score/tier.
+ * Play the tournament. The result TIER is the outcome of the simulation, so a
+ * great squad usually goes far and a weak one usually exits early — but upsets
+ * happen. Deterministic for a given (seed, squad, score) so the reveal, result
+ * screen and leaderboard replay all agree.
  */
-export function simulateTournament(slots, score, tier, seedInput) {
-  const run = RUN[tier.label] || RUN['Group Stage Exit']
+export function simulateTournament(slots, score, seedInput) {
   const squadSeed = slots.filter(s => s.player).map(s => s.player.name).join('|')
-  const rng = makeRng(`${seedInput || squadSeed}|${tier.label}`)
-  const str = Math.max(0, Math.min(1, score / 100))
-  const opponents = pickOpponents(rng, run.matches)
+  const rng = makeRng(`${seedInput || ''}|${squadSeed}|v2`)
+  const S = Math.max(1, Math.min(99, score))
+
+  const groupNames = shuffle(GROUP_OPP, rng).slice(0, 3)
+  const eliteNames = shuffle(ELITE_OPP, rng).slice(0, 4)
 
   const matches = []
   let goalsFor = 0
   let goalsAgainst = 0
 
-  for (let i = 0; i < run.matches; i++) {
-    const isLast = i === run.matches - 1
-    const isKnockout = i >= 3
-    const isGroupExit = run.matches === 3
+  // ── Group stage: 3 matches, advance on points (top two) ───────────────────
+  let pts = 0
+  for (let i = 0; i < 3; i++) {
+    const [gf, ga] = matchGoals(rng, S, GROUP_STR[i])
+    const result = gf > ga ? 'W' : gf < ga ? 'L' : 'D'
+    pts += result === 'W' ? 3 : result === 'D' ? 1 : 0
+    goalsFor += gf; goalsAgainst += ga
+    matches.push({ stage: STAGES[i], opponent: groupNames[i], gf, ga, result, drawn: result === 'D', pens: null })
+  }
+  const advanced = pts >= 4 || (pts === 3 && rng() < 0.5)
 
-    let outcome // 'W' | 'D' | 'L'
-    let pens = null // 'W' | 'L' when decided on penalties
-
-    if (isGroupExit) {
-      outcome = rng() < 0.45 ? 'L' : 'D' // didn't do enough to advance
-    } else if (isLast && run.wonFinal) {
-      if (rng() < 0.3) { outcome = 'D'; pens = 'W' } else outcome = 'W'
-    } else if (isLast) {
-      // The match that knocked the team out.
-      if (isKnockout && rng() < 0.4) { outcome = 'D'; pens = 'L' } else outcome = 'L'
-    } else if (isKnockout && rng() < 0.25) {
-      outcome = 'D'; pens = 'W' // advanced on penalties
-    } else {
-      outcome = 'W'
+  let tierLabel = 'World Cup Winners'
+  if (!advanced) {
+    tierLabel = 'Group Stage Exit'
+  } else {
+    // ── Knockouts: lose and you're out at that stage; win the final to lift it ─
+    for (let i = 0; i < 4; i++) {
+      const [gf, ga] = matchGoals(rng, S, KO_STR[i])
+      let result, pens = null
+      if (gf > ga) result = 'W'
+      else if (gf < ga) result = 'L'
+      else {
+        const p = Math.max(0.3, Math.min(0.7, 0.5 + (S - KO_STR[i]) * 0.011))
+        const win = rng() < p
+        result = win ? 'W' : 'L'
+        pens = win ? 'W' : 'L'
+      }
+      goalsFor += gf; goalsAgainst += ga
+      matches.push({
+        stage: STAGES[3 + i], opponent: eliteNames[i], gf, ga,
+        result, drawn: gf === ga, pens,
+      })
+      if (result === 'L') { tierLabel = KO_EXIT_TIER[i]; break }
     }
-
-    const [gf, ga] = scoreFor(rng, str, outcome, pens)
-    goalsFor += gf
-    goalsAgainst += ga
-
-    matches.push({
-      stage: STAGES[i],
-      opponent: opponents[i],
-      gf, ga,
-      result: pens || outcome, // W/D/L for badge colour
-      drawn: outcome === 'D',
-      pens, // 'W'/'L' if penalties decided it
-    })
   }
 
-  return { matches, goalsFor, goalsAgainst }
+  return { tier: tierLabel, tierMeta: TIER_META[tierLabel], matches, goalsFor, goalsAgainst }
 }
