@@ -192,7 +192,8 @@ def main():
     if os.path.exists(DST):
         try:
             existing = json.load(open(DST))
-            base = [p for p in existing if p.get("year") not in scrape_years]
+            # Keep non-scraped years, but never retain years before 2015 (no real-stats source).
+            base = [p for p in existing if p.get("year") not in scrape_years and p.get("year", 0) >= 2015]
             print(f"Keeping {len(base)} players from non-scraped editions", flush=True)
         except Exception:
             base = []
