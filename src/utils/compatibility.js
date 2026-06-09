@@ -7,7 +7,7 @@ const PLAYER_CAN_PLAY = {
   CB:  { CB: 1.0 },
   RB:  { RB: 1.0, RWB: 1.0 },
   LB:  { LB: 1.0, LWB: 1.0 },
-  CDM: { CDM: 1.0, CM: 1.0, CB: 1.0 },
+  CDM: { CDM: 1.0, CM: 1.0 },
   CM:  { CM: 1.0, CAM: 1.0, CDM: 1.0 },
   CAM: { CAM: 1.0, CF: 1.0, CM: 1.0 },
   RM:  { RM: 1.0, RW: 1.0 },
