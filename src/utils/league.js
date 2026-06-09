@@ -70,7 +70,7 @@ function matchGoals(rng, S, opp) {
 
 export function simulateLeague(slots, score, seedInput) {
   const squadSeed = slots.filter(s => s.player).map(s => s.player.name).join('|')
-  const rng = makeRng(`${seedInput || ''}|${squadSeed}|league-v1`)
+  const rng = makeRng(`${seedInput || ''}|${squadSeed}|league-v2`)
   const S = Math.max(1, Math.min(99, score))
 
   // Each opponent is played once home, once away (38 games), then the whole
@@ -89,7 +89,9 @@ export function simulateLeague(slots, score, seedInput) {
 
   for (const fx of schedule) {
     const homeBoost = fx.home ? 3 : 0
-    const [gf, ga] = matchGoals(rng, S + homeBoost, fx.opp.str)
+    const playerForm = Math.max(1, Math.min(99, S + (rng() - 0.5) * 10))
+    const oppMatchStr = fx.opp.str + (rng() - 0.5) * 10
+    const [gf, ga] = matchGoals(rng, playerForm + homeBoost, oppMatchStr)
     const result = gf > ga ? 'W' : gf < ga ? 'L' : 'D'
     if (result === 'W') { pts += 3; won++ }
     else if (result === 'D') { pts += 1; drawn++ }
@@ -118,9 +120,9 @@ export function simulateLeague(slots, score, seedInput) {
   // more reliably. We also compute a plausible GD so the tiebreaker column
   // makes sense. Player's row is included and the table is sorted pts→GD.
   const tableOthers = OPPONENTS.map(o => {
-    const base = (o.str - 64) * 3.9            // spreads rivals ~20 → ~74 pts
-    const swing = (rng() - 0.5) * 10           // ±5 pts, down from ±8
-    const rivalPts = Math.max(16, Math.min(97, Math.round(base + 18 + swing)))
+    const base = (o.str - 62) * 3.1 + 24       // spreads rivals ~33 → ~89 pts
+    const swing = (rng() - 0.5) * 22           // ±11 pts for realistic season variance
+    const rivalPts = Math.max(16, Math.min(97, Math.round(base + swing)))
     // GD scales with pts (positive = winning team) plus small noise.
     const rivalGD = Math.round((rivalPts - 45) * 0.85 + (rng() - 0.5) * 8)
     return { name: o.name, pts: rivalPts, gd: rivalGD }
