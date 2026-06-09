@@ -151,6 +151,7 @@ export function simulateTournament(slots, score, seedInput) {
     }
   }
 
-  const { goldenBoot, playerOfTournament } = awardStats(slots, matches, rng, name => WC_NATION_PLAYERS[name] ?? [])
-  return { tier: tierLabel, tierMeta: TIER_META[tierLabel], matches, goalsFor, goalsAgainst, goldenBoot, playerOfTournament }
+  const { goldenBoot, playerOfTournament, playmaker, goldenGlove, matchScorers } = awardStats(slots, matches, rng, name => WC_NATION_PLAYERS[name] ?? [])
+  matchScorers.forEach((s, i) => { if (matches[i]) matches[i].scorers = s })
+  return { tier: tierLabel, tierMeta: TIER_META[tierLabel], matches, goalsFor, goalsAgainst, goldenBoot, playerOfTournament, playmaker, goldenGlove }
 }

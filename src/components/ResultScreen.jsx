@@ -562,8 +562,8 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             </div>
           )}
 
-          {/* Awards — Player of the Season/Tournament + Golden Boot */}
-          {(run.playerOfSeason || run.playerOfTournament || run.goldenBoot) && (
+          {/* Awards */}
+          {(run.playerOfSeason || run.playerOfTournament || run.goldenBoot || run.playmaker || run.goldenGlove) && (
             <div className="bg-gray-800 rounded-2xl p-4 mb-6">
               <p className="text-xs uppercase tracking-widest text-gray-500 mb-3">Awards</p>
               <div className="grid grid-cols-2 gap-3">
@@ -592,6 +592,28 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
                     <div className="text-[10px] mt-1 flex gap-1.5 flex-wrap">
                       <span className="text-gray-500">{run.goldenBoot.position}</span>
                       <span className="text-green-400 font-bold">{run.goldenBoot.goals} goals</span>
+                    </div>
+                  </div>
+                )}
+                {run.playmaker && (
+                  <div className="bg-gray-700/60 rounded-xl p-3">
+                    <div className="text-[9px] uppercase tracking-wider text-sky-400 mb-1.5">🎯 Playmaker</div>
+                    <div className="text-white font-bold text-xs leading-tight truncate">{run.playmaker.name}</div>
+                    {(run.playmaker.team || (!isPL && run.playmaker.nation)) && <div className="text-[10px] text-gray-400 mt-0.5 truncate">{run.playmaker.team ?? run.playmaker.nation}</div>}
+                    <div className="text-[10px] mt-1 flex gap-1.5 flex-wrap">
+                      <span className="text-gray-500">{run.playmaker.position}</span>
+                      <span className="text-sky-400 font-bold">{run.playmaker.assists} assists</span>
+                    </div>
+                  </div>
+                )}
+                {run.goldenGlove && (
+                  <div className="bg-gray-700/60 rounded-xl p-3">
+                    <div className="text-[9px] uppercase tracking-wider text-sky-400 mb-1.5">🧤 Golden Glove</div>
+                    <div className="text-white font-bold text-xs leading-tight truncate">{run.goldenGlove.name}</div>
+                    {(!isPL && run.goldenGlove.nation) && <div className="text-[10px] text-gray-400 mt-0.5 truncate">{run.goldenGlove.nation}</div>}
+                    <div className="text-[10px] mt-1 flex gap-1.5 flex-wrap">
+                      <span className="text-gray-500">GK</span>
+                      <span className="text-sky-400 font-bold">{run.goldenGlove.cleanSheets} clean sheets</span>
                     </div>
                   </div>
                 )}

@@ -146,7 +146,8 @@ export function simulateLeague(slots, score, seedInput) {
 
   // Distribute match goals across the XI for awards. Runs after all
   // tier/table RNG so it never changes any existing result or standing.
-  const { goldenBoot, playerOfSeason } = awardStats(slots, matches, rng, name => CLUB_PLAYERS[name] ?? [])
+  const { goldenBoot, playerOfSeason, playmaker, goldenGlove, matchScorers } = awardStats(slots, matches, rng, name => CLUB_PLAYERS[name] ?? [])
+  matchScorers.forEach((s, i) => { if (matches[i]) matches[i].scorers = s })
 
   // Cup competitions — FA Cup, League Cup, Champions League.
   // Run with the same continuing RNG so the results are fully deterministic.
@@ -171,7 +172,7 @@ export function simulateLeague(slots, score, seedInput) {
     perfect: won === 38,
     cleanSheets, biggestWin, biggestLoss, longestWinStreak,
     table,
-    goldenBoot, playerOfSeason,
+    goldenBoot, playerOfSeason, playmaker, goldenGlove,
     ...cups,
     trophyLabel,
   }
@@ -275,20 +276,24 @@ const CLUB_PLAYERS = {
 
 export function awardStats(slots, matches, rng, getOpponentPlayers) {
   const filled = slots.filter(s => s.player)
-  if (!filled.length) return { goldenBoot: null, playerOfSeason: null, playerOfTournament: null }
+  if (!filled.length) return { goldenBoot: null, playerOfSeason: null, playerOfTournament: null, playmaker: null, goldenGlove: null, matchScorers: matches.map(() => []) }
   const gw = filled.map(s => GOAL_W[s.position] ?? 3)
   const aw = filled.map(s => ASSIST_W[s.position] ?? 4)
   const pg = new Array(filled.length).fill(0)
   const pa = new Array(filled.length).fill(0)
   // Opponent goal totals accumulated across all matches, keyed by `name|team`
   const oppAcc = new Map()
+  const matchScorers = []
   for (const m of matches) {
     // Your team's goals
+    const scorers = []
     for (let g = 0; g < m.gf; g++) {
       const si = pickWeighted(gw, rng)
       pg[si]++
+      scorers.push(filled[si].player.name)
       if (rng() < 0.78 && filled.length > 1) pa[pickWeighted(aw, rng, si)]++
     }
+    matchScorers.push(scorers)
     // Opponent goals distributed to their known players
     if (m.ga > 0 && getOpponentPlayers) {
       const ops = getOpponentPlayers(m.opponent) || []
@@ -318,5 +323,14 @@ export function awardStats(slots, matches, rng, getOpponentPlayers) {
   const allStats = [...yourStats, ...oppStats]
   const goldenBoot     = allStats.reduce((b, p) => p.goals         > b.goals         ? p : b, allStats[0])
   const playerOfSeason = allStats.reduce((b, p) => p.contributions > b.contributions ? p : b, allStats[0])
-  return { goldenBoot, playerOfSeason, playerOfTournament: playerOfSeason }
+  const playmaker      = allStats.reduce((b, p) => p.assists       > b.assists       ? p : b, allStats[0])
+
+  const cleanSheetsCount = matches.filter(m => m.ga === 0).length
+  const gkFilled = filled.find(s => s.position === 'GK')
+  const goldenGlove = gkFilled ? {
+    name: gkFilled.player.name, position: 'GK', team: null,
+    nation: gkFilled.player.nation ?? null, cleanSheets: cleanSheetsCount,
+  } : null
+
+  return { goldenBoot, playerOfSeason, playerOfTournament: playerOfSeason, playmaker, goldenGlove, matchScorers }
 }
