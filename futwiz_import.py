@@ -29,6 +29,7 @@ DEFAULT_EDITIONS = list(range(15, 22))
 
 CLUB_FIX = {
     "Brighton & Hove Albion": "Brighton",
+    "Brighton and Hove Albion": "Brighton",
     "Wolverhampton Wanderers": "Wolves",
     "Queens Park Rangers": "QPR",
     "AFC Bournemouth": "Bournemouth",
@@ -54,6 +55,20 @@ CLUB_FIX = {
     "Huddersfield": "Huddersfield Town",
     "Cardiff": "Cardiff City",
     "Burnley FC": "Burnley",
+}
+
+# Clubs that have appeared in the Premier League from 2014/15 onward.
+# Players scraped under a club NOT in this set are transfers/loans that futwiz
+# leaks through the league filter — discard them.
+PL_CLUBS = {
+    "Arsenal","Chelsea","Liverpool","Manchester City","Manchester United",
+    "Tottenham Hotspur","Newcastle United","Aston Villa","Brighton","Bournemouth",
+    "Crystal Palace","Brentford","Fulham","Everton","Wolves","Nottingham Forest",
+    "West Ham United","Leeds United","Leicester City","Southampton","Burnley",
+    "Sheffield United","Luton Town","Ipswich Town","Ipswich","Norwich City",
+    "Sunderland","Middlesbrough","Stoke City","Swansea City","Hull City","Watford",
+    "West Bromwich Albion","Huddersfield Town","Cardiff City","Queens Park Rangers",
+    "QPR","Reading","Wigan Athletic","Blackburn Rovers","Bolton Wanderers",
 }
 
 def norm_pos(p):
@@ -155,6 +170,8 @@ def scrape_edition(pg, ver):
                 pos   = norm_pos(r["pos"])
 
                 if not name or not club or not pos or not (50 <= ovr <= 99):
+                    continue
+                if club not in PL_CLUBS:
                     continue
 
                 key = (name, club)
