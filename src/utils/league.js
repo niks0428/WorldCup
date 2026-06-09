@@ -8,6 +8,7 @@ import { makeRng } from '../lib/seededRandom'
 // Result tiers, best → worst. Reaching "Invincibles" requires a literal 38-0-0.
 export const LEAGUE_TIER_META = {
   'Invincibles':       { label: 'Invincibles · 38-0-0', emoji: '🏆', desc: 'Won all 38. Unbeaten champions. Immortal.' },
+  'Centurions':        { label: 'Centurions · 100 pts', emoji: '💯', desc: '100-point champions. Historically untouchable.' },
   'Champions':         { label: 'Champions',             emoji: '🏆', desc: 'Premier League title.' },
   'Title Race':        { label: 'Runners-up',            emoji: '🥈', desc: 'So close — pipped to the title.' },
   'Champions League':  { label: 'Champions League',      emoji: '🔵', desc: "Top four. Europe's elite next season." },
@@ -134,17 +135,32 @@ export function simulateLeague(slots, score, seedInput) {
   const position = table.find(r => r.isPlayer)?.pos ?? 20
 
   let tier
-  if (won === 38)            tier = 'Invincibles'
-  else if (position === 1)   tier = 'Champions'
-  else if (position === 2)   tier = 'Title Race'
-  else if (position <= 4)    tier = 'Champions League'
-  else if (position <= 7)    tier = 'Europa'
-  else if (position <= 17)   tier = 'Mid-table'
-  else                       tier = 'Relegated'
+  if (won === 38)                      tier = 'Invincibles'
+  else if (position === 1 && pts >= 100) tier = 'Centurions'
+  else if (position === 1)             tier = 'Champions'
+  else if (position === 2)             tier = 'Title Race'
+  else if (position <= 4)              tier = 'Champions League'
+  else if (position <= 7)              tier = 'Europa'
+  else if (position <= 17)             tier = 'Mid-table'
+  else                                 tier = 'Relegated'
 
   // Distribute match goals across the XI for awards. Runs after all
   // tier/table RNG so it never changes any existing result or standing.
   const { goldenBoot, playerOfSeason } = awardStats(slots, matches, rng, name => CLUB_PLAYERS[name] ?? [])
+
+  // Cup competitions — FA Cup, League Cup, Champions League.
+  // Run with the same continuing RNG so the results are fully deterministic.
+  // Only PL-qualification matters for UCL; all teams enter the domestic cups.
+  const cups = simulateCups(S, position, rng)
+
+  // Trophy label: Quadruple / Treble / Double (requires league title)
+  let trophyLabel = null
+  if (position === 1 || tier === 'Invincibles' || tier === 'Centurions') {
+    if (cups.faCupWon && cups.uclWon && cups.leagueCupWon) trophyLabel = 'Quadruple 🏆🏆🏆🏆'
+    else if (cups.faCupWon && cups.uclWon)                 trophyLabel = 'Treble 🏆🏆🏆'
+    else if (cups.faCupWon && cups.leagueCupWon)           trophyLabel = 'Domestic Treble 🏆🏆🏆'
+    else if (cups.faCupWon || cups.uclWon)                 trophyLabel = 'Double 🏆🏆'
+  }
 
   return {
     tier,
@@ -156,7 +172,51 @@ export function simulateLeague(slots, score, seedInput) {
     cleanSheets, biggestWin, biggestLoss, longestWinStreak,
     table,
     goldenBoot, playerOfSeason,
+    ...cups,
+    trophyLabel,
   }
+}
+
+// Simulate FA Cup (6 rounds), League Cup (5 rounds), UCL (5 knockout rounds).
+// Uses a continuation of the league RNG — never call before league sim finishes.
+function simulateCups(S, position, rng) {
+  function cupWin(rng, opponentStr) {
+    const d = S - opponentStr
+    const winP = Math.max(0.08, Math.min(0.92, 0.5 + d * 0.028))
+    return rng() < winP
+  }
+
+  // FA Cup — 6 rounds (R3 → Final). Opponent strength ramps from mid-table to elite.
+  const faRounds = [65, 68, 71, 76, 80, 84]
+  let faCupWon = true
+  let faCupRound = 0
+  for (const opp of faRounds) {
+    faCupRound++
+    if (!cupWin(rng, opp)) { faCupWon = false; break }
+  }
+
+  // League Cup — 5 rounds (R4 → Final). Slightly softer field.
+  const lcRounds = [63, 67, 72, 77, 81]
+  let leagueCupWon = true
+  let leagueCupRound = 0
+  for (const opp of lcRounds) {
+    leagueCupRound++
+    if (!cupWin(rng, opp)) { leagueCupWon = false; break }
+  }
+
+  // UCL — 5 knockout rounds (R16 → Final). Only if top-4 finish.
+  const uclRounds = [76, 80, 83, 86, 88]
+  let uclWon = false
+  let uclRound = 0
+  if (position <= 4) {
+    uclWon = true
+    for (const opp of uclRounds) {
+      uclRound++
+      if (!cupWin(rng, opp)) { uclWon = false; break }
+    }
+  }
+
+  return { faCupWon, faCupRound, leagueCupWon, leagueCupRound, uclWon, uclRound }
 }
 
 // Goal and assist probability weights by slot position. Attackers score, wide

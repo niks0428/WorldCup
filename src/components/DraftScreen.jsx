@@ -59,8 +59,9 @@ function pickRandom(arr) {
 const ITEM_H = 60
 // Per-mode allowances. Classic is the most forgiving; expert is leaner (fewer
 // skips, no bench); hardcore has neither.
-const SKIPS_BY_MODE = { classic: 3, expert: 1, hardcore: 0 }
-const SUBS_BY_MODE  = { classic: 3, expert: 0, hardcore: 0 }
+const CLUB_SWAPS_BY_MODE = { classic: 2, expert: 1, hardcore: 0 }
+const ERA_SWAPS_BY_MODE  = { classic: 1, expert: 0, hardcore: 0 }
+const SUBS_BY_MODE       = { classic: 3, expert: 0, hardcore: 0 }
 
 // A bench/SUB slot accepts any player; a pitch slot needs a compatible position.
 function isBench(slot) {
@@ -342,7 +343,8 @@ export default function DraftScreen({ config, onComplete }) {
   const isHardcore = mode === 'hardcore'
   const isClassic = mode === 'classic'
   const isBlind = config.blindDraft || isHardcore || mode === 'expert'
-  const maxSkips = SKIPS_BY_MODE[mode] ?? 3
+  const maxClubSwaps = CLUB_SWAPS_BY_MODE[mode] ?? 0
+  const maxEraSwaps  = ERA_SWAPS_BY_MODE[mode]  ?? 0
   const subCount = competition === 'pl' && isClassic ? 5 : (SUBS_BY_MODE[mode] ?? 0)
   const formationDef = formations[config.formation]
   // Substitutes bench — count varies by mode (expert/hardcore have none).
@@ -365,7 +367,8 @@ export default function DraftScreen({ config, onComplete }) {
   const [squad, setSquad] = useState([])
   const [selectedPlayer, setSelectedPlayer] = useState(null)
   const [reelKey, setReelKey] = useState(0)
-  const [skipsLeft, setSkipsLeft] = useState(maxSkips)
+  const [clubSwapsLeft, setClubSwapsLeft] = useState(maxClubSwaps)
+  const [eraSwapsLeft,  setEraSwapsLeft]  = useState(maxEraSwaps)
   // Idle-phase free rearrange: slot id of the placed player picked up to move.
   const [movingSlotId, setMovingSlotId] = useState(null)
   // Hardcore: pre-assigned slot for this spin
@@ -384,14 +387,14 @@ export default function DraftScreen({ config, onComplete }) {
   // "Play the Cup" confirm button so the player can add subs / rearrange first.
   useEffect(() => {
     if (isHardcore && startersFilled === 11) {
-      setTimeout(() => onComplete(slots, maxSkips - skipsLeft), 600)
+      setTimeout(() => onComplete(slots, (maxClubSwaps - clubSwapsLeft) + (maxEraSwaps - eraSwapsLeft)), 600)
     }
   }, [startersFilled])
 
   function confirmAndPlay() {
     if (!xiComplete) return
     // The cup is played by the starting XI only — bench is never passed on.
-    onComplete(starterSlots, maxSkips - skipsLeft)
+    onComplete(starterSlots, (maxClubSwaps - clubSwapsLeft) + (maxEraSwaps - eraSwapsLeft))
   }
 
   function getEmptySlots(currentSlots = slots) {
@@ -572,25 +575,40 @@ export default function DraftScreen({ config, onComplete }) {
     setMovingSlotId(null)
   }
 
-  // Removing a player to spin again is a re-roll, so it still costs a skip —
-  // otherwise you could place, remove, and re-spin indefinitely, bypassing the
-  // skip limit. No removal in hardcore.
+  const hasSwapLeft = clubSwapsLeft > 0 || eraSwapsLeft > 0
+
+  // Remove a placed player to re-spin — costs one swap token (club first, era as fallback).
   function removeMovingPlayer() {
-    if (phase !== 'idle' || !movingSlotId || isHardcore || skipsLeft <= 0) return
+    if (phase !== 'idle' || !movingSlotId || isHardcore || !hasSwapLeft) return
     const id = movingSlotId
     setMovingSlotId(null)
-    setSkipsLeft(n => n - 1)
+    if (clubSwapsLeft > 0) setClubSwapsLeft(n => n - 1)
+    else setEraSwapsLeft(n => n - 1)
     setSlots(prev => prev.map(s => s.id === id ? { ...s, player: null } : s))
   }
 
-  function skipSpin() {
-    if (isHardcore || skipsLeft <= 0) return
-    setSkipsLeft(n => n - 1)
-    setSpinIndex(i => i + 1)
-    setCurrentPair(null)
-    setSquad([])
-    setSelectedPlayer(null)
-    setPhase('idle')
+  // Club Swap: keep the era (year), find the next pair in the queue with a different club/nation.
+  function doClubSwap() {
+    if (isHardcore || clubSwapsLeft <= 0 || !currentPair) return
+    const { year, tournament, nation } = currentPair
+    const remaining = spinQueue.slice(spinIndex + 1)
+    const match = remaining.findIndex(p => p.year === year && p.tournament === tournament && p.nation !== nation)
+    const nextIdx = match >= 0 ? spinIndex + 1 + match : spinIndex + 1
+    setClubSwapsLeft(n => n - 1)
+    setSpinIndex(nextIdx)
+    setCurrentPair(null); setSquad([]); setSelectedPlayer(null); setPhase('idle')
+  }
+
+  // Era Swap: keep the club/nation, find the next pair in the queue from a different year.
+  function doEraSwap() {
+    if (isHardcore || eraSwapsLeft <= 0 || !currentPair) return
+    const { nation, year } = currentPair
+    const remaining = spinQueue.slice(spinIndex + 1)
+    const match = remaining.findIndex(p => p.nation === nation && p.year !== year)
+    const nextIdx = match >= 0 ? spinIndex + 1 + match : spinIndex + 1
+    setEraSwapsLeft(n => n - 1)
+    setSpinIndex(nextIdx)
+    setCurrentPair(null); setSquad([]); setSelectedPlayer(null); setPhase('idle')
   }
 
   // Free re-spin when a spun squad has no eligible player — not a voluntary
@@ -641,13 +659,14 @@ export default function DraftScreen({ config, onComplete }) {
           <h1 className="text-xl font-extrabold text-white">🏆 Lift the Trophy</h1>
           <div className="flex items-center gap-2">
             {!isHardcore && (
-              <span className="text-xs text-gray-500">
-                {skipsLeft > 0
-                  ? `${skipsLeft} skip${skipsLeft !== 1 ? 's' : ''} left`
-                  : 'No skips left'}
+              <span className="text-xs text-gray-500 space-x-1.5">
+                {clubSwapsLeft > 0 && <span>🔄×{clubSwapsLeft}</span>}
+                {eraSwapsLeft  > 0 && <span>⏭️×{eraSwapsLeft}</span>}
+                {!hasSwapLeft  && <span>No swaps</span>}
               </span>
             )}
             {isHardcore && <span className="text-xs text-red-400 font-bold">💀 HARDCORE</span>}
+          {config.isH2H && !isHardcore && <span className="text-xs text-yellow-400 font-bold">⚔️ H2H</span>}
             <span className="text-sm text-gray-400">
               {startersFilled}/11{benchSlots.length > 0 && benchFilled > 0 && <span className="text-gray-600"> · {benchFilled} sub{benchFilled !== 1 ? 's' : ''}</span>}
             </span>
@@ -712,12 +731,12 @@ export default function DraftScreen({ config, onComplete }) {
                 <p className="text-red-400 text-xs text-center">No slots or players this one can move to.</p>
               )}
               <div className="flex gap-2">
-                {!isHardcore && skipsLeft > 0 && (
+                {!isHardcore && hasSwapLeft && (
                   <button
                     onClick={removeMovingPlayer}
                     className="flex-1 py-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 text-xs font-bold transition-colors"
                   >
-                    Remove (1 skip)
+                    Remove (1 swap)
                   </button>
                 )}
                 <button
@@ -755,16 +774,25 @@ export default function DraftScreen({ config, onComplete }) {
               <p className="text-xs uppercase tracking-widest text-gray-500">
                 {isHardcore ? `Pick for ${assignedSlot?.position}` : 'Pick a player'}
               </p>
-              {!isHardcore && skipsLeft > 0 && (
-                <button
-                  onClick={skipSpin}
-                  className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  Skip ({skipsLeft} left) →
-                </button>
-              )}
-              {!isHardcore && skipsLeft === 0 && (
-                <span className="text-xs text-gray-600">No skips left</span>
+              {!isHardcore && (
+                <div className="flex gap-1.5 items-center">
+                  <button
+                    onClick={doClubSwap}
+                    disabled={clubSwapsLeft <= 0}
+                    title="Keep the era, swap the club"
+                    className="text-[10px] px-2 py-0.5 rounded border border-gray-700 text-gray-400 hover:border-yellow-400/50 hover:text-yellow-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    🔄 Club ({clubSwapsLeft})
+                  </button>
+                  <button
+                    onClick={doEraSwap}
+                    disabled={eraSwapsLeft <= 0}
+                    title="Keep the club, swap the era"
+                    className="text-[10px] px-2 py-0.5 rounded border border-gray-700 text-gray-400 hover:border-yellow-400/50 hover:text-yellow-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                  >
+                    ⏭️ Era ({eraSwapsLeft})
+                  </button>
+                </div>
               )}
             </div>
 

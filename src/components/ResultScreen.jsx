@@ -128,7 +128,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
     // that lifts the trophy still earns the gold confetti).
     const cel = {
       'World Cup Winners': 95, 'Finalists': 84, 'Semi-finalists': 76,
-      'Invincibles': 99, 'Champions': 95, 'Title Race': 84, 'Champions League': 76,
+      'Invincibles': 99, 'Centurions': 97, 'Champions': 95, 'Title Race': 84, 'Champions League': 76,
     }[run.tier] ?? 60
     const t = setTimeout(() => { fireConfetti(cel); playResult(cel) }, 400)
     return () => clearTimeout(t)
@@ -167,11 +167,16 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
 
   function handleShareText() {
     const url = buildSquadUrl(slots, formation, mode)
-    const text = isPL
-      ? (run.perfect
-          ? `38-0-0. I built a Premier League XI and went UNBEATEN — Invincibles. 🏆 Lift the Trophy — ${url}`
-          : `I built a Premier League XI and finished ${tier.label} (${run.won}W ${run.drawn}D ${run.lost}L). ${tier.emoji} Lift the Trophy — ${url}`)
-      : `I built a World Cup XI that reached the ${tier.label}. ${tier.emoji} Lift the Trophy — ${url}`
+    let text
+    if (isPL) {
+      const cups = [run.faCupWon && 'FA Cup', run.leagueCupWon && 'League Cup', run.uclWon && 'Champions League'].filter(Boolean)
+      const cupsStr = cups.length ? ` + ${cups.join(' + ')}` : ''
+      if (run.perfect) text = `38-0-0. I built a Premier League XI and went UNBEATEN${cupsStr}. INVINCIBLES. 🏆 Lift the Trophy — ${url}`
+      else if (run.trophyLabel) text = `I won the ${run.trophyLabel} with my Premier League XI! ${tier.emoji} (${run.won}W ${run.drawn}D ${run.lost}L) Lift the Trophy — ${url}`
+      else text = `I built a Premier League XI and finished ${tier.label} (${run.won}W ${run.drawn}D ${run.lost}L)${cupsStr}. ${tier.emoji} Lift the Trophy — ${url}`
+    } else {
+      text = `I built a World Cup XI that reached the ${tier.label}. ${tier.emoji} Lift the Trophy — ${url}`
+    }
     navigator.clipboard.writeText(text).then(() => {
       setCopyState('text'); setTimeout(() => setCopyState('idle'), 2500)
     })
@@ -238,7 +243,28 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             <div className="text-gray-400 text-sm">
               Team Score: <span className="text-yellow-400 font-bold text-lg">{score}</span>
             </div>
+
+            {/* Cup trophies — PL only */}
+            {isPL && (run.faCupWon || run.uclWon || run.leagueCupWon) && (
+              <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
+                {run.faCupWon      && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30">🏆 FA Cup</span>}
+                {run.leagueCupWon  && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">🏆 League Cup</span>}
+                {run.uclWon        && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">⭐ Champions League</span>}
+              </div>
+            )}
+            {isPL && run.trophyLabel && (
+              <div className="mt-2 text-yellow-400 font-extrabold text-base">{run.trophyLabel}</div>
+            )}
           </div>
+
+          {/* H2H — played via h2h link (no challenger score yet) */}
+          {config?.isH2H && !isChallenge && (
+            <div className="rounded-2xl p-4 mb-6 text-center border border-yellow-400/30 bg-yellow-400/5">
+              <div className="text-2xl mb-1">⚔️</div>
+              <div className="font-extrabold text-yellow-300 text-sm mb-1">Head-to-Head · Your score: {score}</div>
+              <div className="text-gray-400 text-xs mb-3">Share your result with your opponent to compare!</div>
+            </div>
+          )}
 
           {/* Challenge head-to-head result */}
           {isChallenge && (
@@ -662,6 +688,13 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             </div>
           )}
 
+          {/* H2H: show send-your-score CTA prominently before anything else */}
+          {config?.isH2H && seed && (
+            <button onClick={handleChallenge} className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-extrabold transition-colors">
+              {challengeCopied ? '✓ Copied!' : '⚔️ Send My Score to Opponent'}
+            </button>
+          )}
+
           {/* Share */}
           <button onClick={handleShareImage} disabled={imgState === 'working'} className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 disabled:opacity-60 text-gray-900 font-bold transition-colors">
             {imgState === 'working' ? 'Generating…' : imgState === 'done' ? '✓ Image saved!' : '📸 Share Image'}
@@ -674,7 +707,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             <button onClick={handleShareLink} className="py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition-colors">
               {copyState === 'link' ? '✓ Copied!' : '🔗 Squad Link'}
             </button>
-            {seed && (
+            {seed && !config?.isH2H && (
               <button onClick={handleChallenge} className="py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition-colors">
                 {challengeCopied ? '✓ Copied!' : '🤝 Challenge'}
               </button>

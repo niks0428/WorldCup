@@ -51,6 +51,13 @@ function squadFromHash(hash) {
   return { slots, formation: data.f, mode: data.m }
 }
 
+function h2hFromHash(hash) {
+  if (!hash.startsWith('#h2h=')) return null
+  const [formation, seed, compStr] = hash.slice(5).split('|')
+  if (!formations[formation] || !seed) return null
+  return { formation, seed, mode: 'classic', isH2H: true, competition: compStr === 'pl' ? 'pl' : 'wc' }
+}
+
 function challengeFromHash(hash) {
   if (!hash.startsWith('#c=')) return null
   // formation|seed[|challengerScore|challengerName|competition]. Neither
@@ -97,6 +104,13 @@ export default function App() {
         setFinalSlots(shared.slots)
         setConfig({ formation: shared.formation, mode: shared.mode, competition: comp })
         setScreen('result')
+        return
+      }
+      const h2h = h2hFromHash(hash)
+      if (h2h) {
+        setCompetition(h2h.competition)
+        setConfig(h2h)
+        setScreen('draft')
         return
       }
       const challenge = challengeFromHash(hash)

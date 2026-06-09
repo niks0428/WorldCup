@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { isConfigured } from '../lib/supabase'
-import { todaySeed } from '../lib/seededRandom'
+import { todaySeed, randomSeed } from '../lib/seededRandom'
 import { isDailyDoneToday, timeUntilNextDaily, dailyDifficulty, DIFFICULTY_LABEL } from '../lib/daily'
 import { isMuted, toggleMuted } from '../lib/sound'
 import { getChallengeStreak } from '../lib/challengeStreak'
@@ -61,9 +61,9 @@ function FormationPreview({ formation }) {
   )
 }
 const MODES = [
-  { id: 'classic',  label: 'Classic',  badge: null, skips: 3, desc: 'Full squad, stats visible. Pick your slot.' },
-  { id: 'expert',   label: 'Expert',   badge: null, skips: 1, desc: 'Position-compatible players only. No stats.' },
-  { id: 'hardcore', label: 'Hardcore', badge: '💀', skips: 0, desc: 'Random position. No stats. Stats revealed at the end.' },
+  { id: 'classic',  label: 'Classic',  badge: null, swapLabel: '2🔄 · 1⏭️', desc: 'Full squad, stats visible. 2 club swaps, 1 era swap.' },
+  { id: 'expert',   label: 'Expert',   badge: null, swapLabel: '1🔄',        desc: 'Position-compatible players only. No stats. 1 club swap.' },
+  { id: 'hardcore', label: 'Hardcore', badge: '💀', swapLabel: 'No swaps',   desc: 'Random position. No stats. Stats revealed at the end.' },
 ]
 
 const ERA_OPTIONS = [
@@ -80,6 +80,8 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
   const [eraFilter, setEraFilter] = useState('all')
   const [blindDraft, setBlindDraft] = useState(false)
   const [showAllFormations, setShowAllFormations] = useState(false)
+  const [h2hSeed, setH2hSeed] = useState(null)
+  const [h2hCopied, setH2hCopied] = useState(false)
   const [dailyDone] = useState(() => isDailyDoneToday(competition))
   const [countdown, setCountdown] = useState(() => timeUntilNextDaily().label)
   const [muted, setMuted] = useState(() => isMuted())
@@ -186,6 +188,57 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
           </button>
         )}
 
+        {/* Head-to-Head challenge */}
+        {(() => {
+          function createH2H() {
+            const seed = randomSeed()
+            setH2hSeed(seed)
+            const url = `${window.location.href.split('#')[0]}#h2h=${formation}|${seed}|${isPL ? 'pl' : 'wc'}`
+            navigator.clipboard.writeText(url).then(() => {
+              setH2hCopied(true); setTimeout(() => setH2hCopied(false), 3000)
+            })
+          }
+          return (
+            <div className="rounded-2xl border-2 border-gray-700 bg-gray-900 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">⚔️</span>
+                <div>
+                  <div className="text-white font-bold text-sm">Head-to-Head</div>
+                  <div className="text-gray-500 text-xs">Same spins, you vs a mate — highest score wins</div>
+                </div>
+              </div>
+              {!h2hSeed ? (
+                <button
+                  onClick={createH2H}
+                  className="w-full py-2 rounded-xl border border-gray-600 hover:border-yellow-400/60 text-gray-300 hover:text-yellow-300 text-sm font-bold transition-all"
+                >
+                  Generate Challenge Link
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className={`text-center text-xs font-bold py-1.5 rounded-lg ${h2hCopied ? 'text-green-400' : 'text-gray-400'}`}>
+                    {h2hCopied ? '✓ Link copied — send it to your opponent!' : 'Link ready · click to copy again'}
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={createH2H}
+                      className="flex-1 py-2 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 text-xs font-bold transition-colors"
+                    >
+                      📋 Copy Link
+                    </button>
+                    <button
+                      onClick={() => onStart({ mode: 'classic', formation, seed: h2hSeed, isH2H: true, eraFilter: isPL ? 'all' : eraFilter, blindDraft: false })}
+                      className="flex-1 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-gray-900 text-xs font-bold transition-colors"
+                    >
+                      Play Your Side →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })()}
+
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-gray-800" />
           <span className="text-gray-600 text-xs uppercase tracking-widest">or play your own</span>
@@ -212,9 +265,9 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
                     {m.badge && <span>{m.badge}</span>}
                   </div>
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                    m.skips === 0 ? 'bg-red-500/20 text-red-400' : 'bg-gray-700 text-gray-400'
+                    m.id === 'hardcore' ? 'bg-red-500/20 text-red-400' : 'bg-gray-700 text-gray-400'
                   }`}>
-                    {m.skips === 0 ? 'No skips' : `${m.skips} skip${m.skips !== 1 ? 's' : ''}`}
+                    {m.swapLabel}
                   </span>
                 </div>
                 <div className="text-xs leading-snug opacity-80">{m.desc}</div>
