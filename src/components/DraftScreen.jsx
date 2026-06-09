@@ -329,10 +329,19 @@ export default function DraftScreen({ config, onComplete }) {
   // the draft rules, while config.mode stays 'daily' for leaderboard/streak.
   const mode = config.difficulty || config.mode
   const competition = config.competition || 'wc'
-  const pool = useMemo(() => poolFor(competition), [competition])
+  const pool = useMemo(() => {
+    let p = poolFor(competition)
+    if (competition !== 'pl' && config.eraFilter && config.eraFilter !== 'all') {
+      const ERA_MIN = { '2000s': 2000, '2010s': 2010, 'modern': 2018 }
+      const min = ERA_MIN[config.eraFilter]
+      if (min) p = p.filter(pl => pl.year >= min)
+    }
+    return p
+  }, [competition, config.eraFilter])
   const pairs = useMemo(() => buildPairs(pool), [pool])
   const isHardcore = mode === 'hardcore'
   const isClassic = mode === 'classic'
+  const isBlind = config.blindDraft || isHardcore || mode === 'expert'
   const maxSkips = SKIPS_BY_MODE[mode] ?? 3
   const subCount = competition === 'pl' && isClassic ? 5 : (SUBS_BY_MODE[mode] ?? 0)
   const formationDef = formations[config.formation]
@@ -435,9 +444,8 @@ export default function DraftScreen({ config, onComplete }) {
       )
     }
 
-    const blindMode = isHardcore || mode === 'expert'
     setSquad(available.sort((a, b) =>
-      blindMode ? a.name.localeCompare(b.name) : b.overall - a.overall
+      isBlind ? a.name.localeCompare(b.name) : b.overall - a.overall
     ))
     setPhase('picking')
   }
@@ -787,7 +795,7 @@ export default function DraftScreen({ config, onComplete }) {
                   fitLabel={fitLabel}
                   fitCls={fitCls}
                   onClick={() => pickPlayer(player)}
-                  hideStats={isHardcore || mode === 'expert'}
+                  hideStats={isBlind}
                 />
               )
             })}

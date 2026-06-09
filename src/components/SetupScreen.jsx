@@ -61,15 +61,24 @@ function FormationPreview({ formation }) {
   )
 }
 const MODES = [
-  { id: 'classic',  label: 'Classic',  badge: null, desc: 'Full squad, stats visible. Pick your slot. 3 skips, 3 subs.' },
-  { id: 'expert',   label: 'Expert',   badge: null, desc: 'Position-compatible players only, no stats. 1 skip, no subs.' },
-  { id: 'hardcore', label: 'Hardcore', badge: '💀', desc: 'Random position assigned. No stats, no skips. Stats revealed at the end.' },
+  { id: 'classic',  label: 'Classic',  badge: null, skips: 3, desc: 'Full squad, stats visible. Pick your slot.' },
+  { id: 'expert',   label: 'Expert',   badge: null, skips: 1, desc: 'Position-compatible players only. No stats.' },
+  { id: 'hardcore', label: 'Hardcore', badge: '💀', skips: 0, desc: 'Random position. No stats. Stats revealed at the end.' },
+]
+
+const ERA_OPTIONS = [
+  { id: 'all',    label: 'All-time' },
+  { id: '2000s',  label: '2000s+' },
+  { id: '2010s',  label: '2010s+' },
+  { id: 'modern', label: 'Modern' },
 ]
 
 export default function SetupScreen({ competition = 'wc', onStart, onBack, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, onChallenges, onPlayers, streak, currentGroup }) {
   const isPL = competition === 'pl'
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
+  const [eraFilter, setEraFilter] = useState('all')
+  const [blindDraft, setBlindDraft] = useState(false)
   const [showAllFormations, setShowAllFormations] = useState(false)
   const [dailyDone] = useState(() => isDailyDoneToday(competition))
   const [countdown, setCountdown] = useState(() => timeUntilNextDaily().label)
@@ -190,22 +199,71 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
             {MODES.map(m => (
               <button
                 key={m.id}
-                onClick={() => setMode(m.id)}
+                onClick={() => { setMode(m.id); if (m.id !== 'classic') setBlindDraft(false) }}
                 className={`rounded-xl border-2 p-3 text-left transition-all ${
                   mode === m.id
                     ? m.id === 'hardcore' ? 'border-red-500 bg-red-500/10 text-white' : 'border-yellow-400 bg-yellow-400/10 text-white'
                     : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
                 }`}
               >
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-bold text-sm">{m.label}</span>
-                  {m.badge && <span>{m.badge}</span>}
+                <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm">{m.label}</span>
+                    {m.badge && <span>{m.badge}</span>}
+                  </div>
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                    m.skips === 0 ? 'bg-red-500/20 text-red-400' : 'bg-gray-700 text-gray-400'
+                  }`}>
+                    {m.skips === 0 ? 'No skips' : `${m.skips} skip${m.skips !== 1 ? 's' : ''}`}
+                  </span>
                 </div>
                 <div className="text-xs leading-snug opacity-80">{m.desc}</div>
               </button>
             ))}
           </div>
         </div>
+
+        {/* Blind Draft toggle — Classic only (expert/hardcore always hide stats) */}
+        {mode === 'classic' && (
+          <button
+            onClick={() => setBlindDraft(v => !v)}
+            className={`w-full flex items-center justify-between rounded-xl border-2 px-4 py-3 transition-all ${
+              blindDraft
+                ? 'border-yellow-400 bg-yellow-400/10 text-white'
+                : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
+            }`}
+          >
+            <div className="text-left">
+              <div className="font-bold text-sm">🙈 Blind Draft</div>
+              <div className="text-xs opacity-70 mt-0.5">Pick players without seeing their stats</div>
+            </div>
+            <div className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ml-3 ${blindDraft ? 'bg-yellow-400' : 'bg-gray-700'}`}>
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${blindDraft ? 'left-5' : 'left-0.5'}`} />
+            </div>
+          </button>
+        )}
+
+        {/* Era Filter — WC / Euro only */}
+        {!isPL && (
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-widest text-gray-500 mb-2">Era</h2>
+            <div className="grid grid-cols-4 gap-1.5">
+              {ERA_OPTIONS.map(e => (
+                <button
+                  key={e.id}
+                  onClick={() => setEraFilter(e.id)}
+                  className={`py-2 rounded-lg border-2 text-xs font-bold transition-all ${
+                    eraFilter === e.id
+                      ? 'border-yellow-400 bg-yellow-400/10 text-yellow-300'
+                      : 'border-gray-700 bg-gray-900 text-gray-400 hover:border-gray-500'
+                  }`}
+                >
+                  {e.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Formation */}
         <div>
@@ -248,7 +306,7 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
         </div>
 
         <button
-          onClick={() => onStart({ mode, formation })}
+          onClick={() => onStart({ mode, formation, eraFilter: isPL ? 'all' : eraFilter, blindDraft: mode === 'classic' ? blindDraft : false })}
           className={`w-full py-4 rounded-2xl font-extrabold text-lg transition-colors shadow-lg ${
             mode === 'hardcore' ? 'bg-red-500 hover:bg-red-400 text-white shadow-red-500/20' : 'bg-yellow-400 hover:bg-yellow-300 text-gray-900 shadow-yellow-400/20'
           }`}

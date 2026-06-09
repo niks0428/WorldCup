@@ -1,1 +1,27 @@
 @import "tailwindcss";
+
+@theme {
+  --animate-bounce-in: bounce-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-trophy-in: trophy-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-drum-roll: drum-roll 0.3s ease-in-out infinite;
+}
+
+@keyframes bounce-in {
+  0%   { transform: scale(0); }
+  60%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes trophy-in {
+  0%   { opacity: 0; transform: scale(0.6) translateY(20px); }
+  60%  { opacity: 1; transform: scale(1.06) translateY(-4px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes drum-roll {
+  0%   { transform: translateX(0); }
+  25%  { transform: translateX(-3px); }
+  50%  { transform: translateX(0); }
+  75%  { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
