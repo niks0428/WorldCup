@@ -26,6 +26,7 @@ export const CLUB_META = {
   'Fulham':             { id: 63,   short: 'FUL', color: '#000000' },
   'Huddersfield Town':  { id: 394,  short: 'HUD', color: '#0E63AD' },
   'Hull City':          { id: 322,  short: 'HUL', color: '#F18A01' },
+  'Ipswich':            { id: 349,  short: 'IPS', color: '#0044A9' },
   'Ipswich Town':       { id: 349,  short: 'IPS', color: '#0044A9' },
   'Leeds United':       { id: 341,  short: 'LEE', color: '#1D428A' },
   'Leicester City':     { id: 338,  short: 'LEI', color: '#003090' },
