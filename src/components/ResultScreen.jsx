@@ -836,21 +836,9 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             {copyState === 'text' ? '✓ Copied!' : '📋 Copy Result + Link'}
           </button>
 
-          <div className="grid grid-cols-2 gap-2">
-            <button onClick={handleShareLink} className="py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition-colors">
-              {copyState === 'link' ? '✓ Copied!' : '🔗 Squad Link'}
-            </button>
-            {seed && !config?.isH2H && (
-              <button onClick={handleChallenge} className="py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition-colors">
-                {challengeCopied ? '✓ Copied!' : '🤝 Challenge'}
-              </button>
-            )}
-            {!seed && isConfigured && (
-              <button onClick={onLeaderboard} className="py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition-colors">
-                🏅 Leaderboard
-              </button>
-            )}
-          </div>
+          <button onClick={handleShareLink} className="w-full py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition-colors">
+            {copyState === 'link' ? '✓ Copied!' : '🔗 Squad Link'}
+          </button>
 
           {seed && isConfigured && (
             <button onClick={onLeaderboard} className="w-full py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white font-bold text-sm transition-colors">
