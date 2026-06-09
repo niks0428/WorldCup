@@ -334,7 +334,7 @@ export default function DraftScreen({ config, onComplete }) {
   const isHardcore = mode === 'hardcore'
   const isClassic = mode === 'classic'
   const maxSkips = SKIPS_BY_MODE[mode] ?? 3
-  const subCount = SUBS_BY_MODE[mode] ?? 0
+  const subCount = competition === 'pl' && isClassic ? 5 : (SUBS_BY_MODE[mode] ?? 0)
   const formationDef = formations[config.formation]
   // Substitutes bench — count varies by mode (expert/hardcore have none).
   const benchTemplate = Array.from({ length: subCount }, (_, i) => ({
