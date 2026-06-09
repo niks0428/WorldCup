@@ -20,7 +20,7 @@ function runForRow(s, competition) {
       : simulateTournament(slots, s.score, s.seed)
   } catch {
     // Never let one malformed/hostile row break the whole leaderboard render.
-    return { goalsFor: 0, goalsAgainst: 0 }
+    return { goalsFor: 0, goalsAgainst: 0, won: 0, drawn: 0, lost: 0 }
   }
 }
 
@@ -65,6 +65,7 @@ const MODE_TABS = [
   { id: 'hardcore', label: '💀' },
 ]
 const SORT_TABS = [
+  { id: 'wins',      label: 'Wins',      plOnly: true },
   { id: 'placement', label: 'Placement' },
   { id: 'rating',    label: 'Rating' },
   { id: 'gd',        label: 'Goal Diff' },
@@ -74,10 +75,11 @@ const SORT_TABS = [
 
 // The chosen sort field's raw value for a row. 'desc' = highest value first.
 function primaryVal(s, sortBy, tierRank) {
+  if (sortBy === 'wins')   return s._won
   if (sortBy === 'rating') return s.score
-  if (sortBy === 'gd') return s._gd
-  if (sortBy === 'gf') return s._gf
-  if (sortBy === 'ga') return s._ga
+  if (sortBy === 'gd')     return s._gd
+  if (sortBy === 'gf')     return s._gf
+  if (sortBy === 'ga')     return s._ga
   return tierRank[s.tier] || 0 // placement
 }
 
@@ -97,7 +99,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
   const showCompToggle = !challengeSeed && !groupCode
   const [timeFilter, setTimeFilter] = useState('alltime')
   const [modeFilter, setModeFilter] = useState('all')
-  const [sortBy, setSortBy] = useState('placement')
+  const [sortBy, setSortBy] = useState(competition === 'pl' ? 'wins' : 'placement')
   const [sortDir, setSortDir] = useState('desc')
   // Scores vs. challenge win-streak board. Streaks are global only — a specific
   // challenge or group view stays on its scores list.
@@ -106,6 +108,12 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
   const [dailyStreaks, setDailyStreaks] = useState([])
   const showStreakToggle = !challengeSeed && !groupCode
   const myName = getSavedName()
+
+  // Reset sort to the natural default when switching competitions.
+  useEffect(() => {
+    setSortBy(comp === 'pl' ? 'wins' : 'placement')
+    setSortDir('desc')
+  }, [comp])
 
   useEffect(() => {
     if (!isConfigured || board !== 'scores') return
@@ -136,19 +144,28 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
       .finally(() => setLoading(false))
   }, [board, comp])
 
-  // Attach goals from the simulated run, then rank by score → goal difference.
+  // Attach goals + win record from the simulated run, then rank by chosen field.
   const ranked = useMemo(() => {
     const list = scores
       .map(s => {
         const run = runForRow(s, comp)
-        return { ...s, _gf: run.goalsFor, _ga: run.goalsAgainst, _gd: run.goalsFor - run.goalsAgainst }
+        return {
+          ...s,
+          _gf:    run.goalsFor,
+          _ga:    run.goalsAgainst,
+          _gd:    run.goalsFor - run.goalsAgainst,
+          _won:   run.won   ?? 0,
+          _drawn: run.drawn ?? 0,
+          _lost:  run.lost  ?? 0,
+        }
       })
       // Sort by the chosen field + direction, then a stable best-first chain
-      // (placement → rating → goal difference → earliest) to break ties.
+      // (wins → placement → rating → goal difference → earliest) to break ties.
       .sort((a, b) => {
         const diff = primaryVal(b, sortBy, tierRank) - primaryVal(a, sortBy, tierRank)
         if (diff) return sortDir === 'asc' ? -diff : diff
-        return (tierRank[b.tier] || 0) - (tierRank[a.tier] || 0) ||
+        return (b._won - a._won) ||
+          (tierRank[b.tier] || 0) - (tierRank[a.tier] || 0) ||
           b.score - a.score ||
           b._gd - a._gd ||
           new Date(a.created_at) - new Date(b.created_at)
@@ -257,7 +274,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
           {board === 'scores' && (
             <>
               <div className="grid grid-cols-3 gap-2 mb-2">
-                {SORT_TABS.map(t => (
+                {SORT_TABS.filter(t => !t.plOnly || isPL).map(t => (
                   <button
                     key={t.id}
                     onClick={() => setSortBy(t.id)}
@@ -330,25 +347,40 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
                     <div className="text-gray-400 text-xs truncate">
                       {tierEmoji[s.tier] || ''} {s.tier} · {s.formation} · {MODE_LABEL[s.mode] || s.mode}
                     </div>
-                    <div className="text-[11px] mt-0.5 tabular-nums flex items-center gap-1.5">
-                      <span>
-                        <span className="text-green-400 font-semibold">{s._gf}</span>
-                        <span className="text-gray-600"> scored · </span>
-                        <span className="text-red-400 font-semibold">{s._ga}</span>
-                        <span className="text-gray-600"> conceded · GD </span>
+                    {isPL && (
+                      <div className="text-[11px] mt-0.5 tabular-nums">
+                        <span className="text-green-400 font-semibold">{s._won}W</span>
+                        <span className="text-gray-600"> · </span>
+                        <span className="text-gray-300 font-semibold">{s._drawn}D</span>
+                        <span className="text-gray-600"> · </span>
+                        <span className="text-red-400 font-semibold">{s._lost}L</span>
+                        <span className="text-gray-600"> · GD </span>
                         <span className={`font-semibold ${s._tiebreak ? 'text-yellow-400' : 'text-gray-300'}`}>
                           {s._gd >= 0 ? '+' : ''}{s._gd}
                         </span>
-                      </span>
-                      {s._tiebreak && (
-                        <span
-                          className="text-[9px] font-bold text-yellow-400/90 bg-yellow-400/10 border border-yellow-400/25 rounded px-1 py-px shrink-0"
-                          title="Tied on score — ranked by goal difference"
-                        >
-                          ⚖️ GD
+                      </div>
+                    )}
+                    {!isPL && (
+                      <div className="text-[11px] mt-0.5 tabular-nums flex items-center gap-1.5">
+                        <span>
+                          <span className="text-green-400 font-semibold">{s._gf}</span>
+                          <span className="text-gray-600"> scored · </span>
+                          <span className="text-red-400 font-semibold">{s._ga}</span>
+                          <span className="text-gray-600"> conceded · GD </span>
+                          <span className={`font-semibold ${s._tiebreak ? 'text-yellow-400' : 'text-gray-300'}`}>
+                            {s._gd >= 0 ? '+' : ''}{s._gd}
+                          </span>
                         </span>
-                      )}
-                    </div>
+                        {s._tiebreak && (
+                          <span
+                            className="text-[9px] font-bold text-yellow-400/90 bg-yellow-400/10 border border-yellow-400/25 rounded px-1 py-px shrink-0"
+                            title="Tied on score — ranked by goal difference"
+                          >
+                            ⚖️ GD
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-yellow-400 font-extrabold text-lg">{s.score}</div>
