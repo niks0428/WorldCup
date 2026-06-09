@@ -4,7 +4,7 @@ import { simulateLeague } from '../utils/league'
 import { getAchievements } from '../lib/achievements'
 import PitchView from './PitchView'
 import { useState, useEffect, useRef } from 'react'
-import { submitScore, isConfigured } from '../lib/supabase'
+import { submitScore, isConfigured, saveH2HEntry, getH2HSession } from '../lib/supabase'
 import confetti from 'canvas-confetti'
 import { FlagImg } from '../lib/flags'
 import { playResult } from '../lib/sound'
@@ -84,6 +84,10 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
   const [nameError, setNameError] = useState('')
   const [showAllMatches, setShowAllMatches] = useState(false)
   const [showTable, setShowTable] = useState(false)
+  const [h2hStatus, setH2hStatus] = useState('idle') // idle|saving|waiting|complete
+  const [h2hSession, setH2hSession] = useState(null)
+  const h2hSaveRef = useRef(false)
+  const h2hStreakRef = useRef(false)
   const isDaily = mode === 'daily'
   const inGroup = Boolean(groupCode)
 
@@ -145,6 +149,52 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
       .catch(() => setSubmitState('idle'))
   }, [])
 
+  // Auto-save to H2H session and show comparison or waiting state.
+  useEffect(() => {
+    if (!config?.isH2H || !seed) return
+    // If we already saved for this seed (e.g. page reload), just poll session state.
+    let existing = null
+    try { existing = JSON.parse(localStorage.getItem(`ltt_h2h_${seed}`)) } catch {}
+    if (existing) {
+      getH2HSession(seed).then(s => {
+        if (s) { setH2hSession(s); setH2hStatus(s.p2_score != null ? 'complete' : 'waiting') }
+      })
+      return
+    }
+    if (h2hSaveRef.current) return
+    h2hSaveRef.current = true
+    const playerName = getSavedName() || 'Anonymous'
+    const squadUrl = buildSquadUrl(slots, formation, mode)
+    setH2hStatus('saving')
+    saveH2HEntry({ seed, formation, competition, name: playerName, score, tier: tier.label, squadUrl })
+      .then(role => {
+        try {
+          localStorage.setItem(`ltt_h2h_${seed}`, JSON.stringify({ score, tier: tier.label, squadUrl, name: playerName, role }))
+        } catch {}
+        if (role === 'p2' || role === 'full') {
+          return getH2HSession(seed).then(s => { setH2hSession(s); setH2hStatus('complete') })
+        }
+        setH2hStatus('waiting')
+      })
+      .catch(() => setH2hStatus('idle'))
+  }, [])
+
+  // Record H2H streak once when the comparison becomes available.
+  useEffect(() => {
+    if (!h2hSession || h2hSession.p2_score == null || h2hStreakRef.current) return
+    const streakKey = `ltt_h2h_streak_${seed}`
+    if (localStorage.getItem(streakKey)) return
+    h2hStreakRef.current = true
+    let myData = null
+    try { myData = JSON.parse(localStorage.getItem(`ltt_h2h_${seed}`)) } catch {}
+    if (!myData) return
+    const opponentScore = myData.role === 'p1' ? h2hSession.p2_score : h2hSession.p1_score
+    if (opponentScore != null) {
+      recordChallengeResult(myData.score > opponentScore, competition)
+      try { localStorage.setItem(streakKey, '1') } catch {}
+    }
+  }, [h2hSession])
+
   async function handleSubmit() {
     const trimmed = name.trim()
     if (!trimmed || submitState !== 'idle') return
@@ -193,6 +243,19 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
     navigator.clipboard.writeText(url).then(() => {
       setChallengeCopied(true); setTimeout(() => setChallengeCopied(false), 2500)
     })
+  }
+
+  function handleCopyH2HLink() {
+    const base = window.location.href.split('#')[0]
+    const url = `${base}#h2h=${formation}|${seed}|${competition === 'pl' ? 'pl' : 'wc'}`
+    navigator.clipboard.writeText(url).then(() => {
+      setChallengeCopied(true); setTimeout(() => setChallengeCopied(false), 2500)
+    })
+  }
+
+  async function checkH2HResult() {
+    const s = await getH2HSession(seed)
+    if (s) { setH2hSession(s); if (s.p2_score != null) setH2hStatus('complete') }
   }
 
   async function handleShareImage() {
@@ -257,14 +320,57 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             )}
           </div>
 
-          {/* H2H — played via h2h link (no challenger score yet) */}
-          {config?.isH2H && !isChallenge && (
-            <div className="rounded-2xl p-4 mb-6 text-center border border-yellow-400/30 bg-yellow-400/5">
-              <div className="text-2xl mb-1">⚔️</div>
-              <div className="font-extrabold text-yellow-300 text-sm mb-1">Head-to-Head · Your score: {score}</div>
-              <div className="text-gray-400 text-xs mb-3">Share your result with your opponent to compare!</div>
-            </div>
-          )}
+          {/* H2H panel — auto-saves score and shows waiting / comparison */}
+          {config?.isH2H && !isChallenge && (() => {
+            let myData = null
+            try { myData = JSON.parse(localStorage.getItem(`ltt_h2h_${seed}`)) } catch {}
+            const p1 = h2hSession ? { name: h2hSession.p1_name, score: h2hSession.p1_score, tier: h2hSession.p1_tier, squad: h2hSession.p1_squad_url } : null
+            const p2 = h2hSession ? { name: h2hSession.p2_name, score: h2hSession.p2_score, tier: h2hSession.p2_tier, squad: h2hSession.p2_squad_url } : null
+            const me   = myData?.role === 'p1' ? p1 : p2
+            const them = myData?.role === 'p1' ? p2 : p1
+            const won  = me && them && me.score != null && them.score != null && me.score > them.score
+            return (
+              <div className="rounded-2xl p-4 mb-6 border border-yellow-400/30 bg-yellow-400/5">
+                {(h2hStatus === 'idle' || h2hStatus === 'saving') && (
+                  <div className="text-center text-yellow-300 text-sm py-1">⚔️ Saving your score…</div>
+                )}
+                {h2hStatus === 'waiting' && (
+                  <div className="text-center space-y-2">
+                    <div className="text-2xl">⚔️</div>
+                    <div className="font-extrabold text-yellow-300 text-sm">Waiting for opponent</div>
+                    <div className="text-gray-400 text-xs">
+                      Your score: <span className="text-yellow-400 font-bold">{score}</span> saved. Send them the link!
+                    </div>
+                    <button
+                      onClick={handleCopyH2HLink}
+                      className="w-full py-1.5 rounded-lg border border-yellow-400/40 text-yellow-400 text-xs font-bold hover:bg-yellow-400/10 transition-colors"
+                    >
+                      {challengeCopied ? '✓ Copied!' : '📋 Copy H2H Link'}
+                    </button>
+                    <button onClick={checkH2HResult} className="text-xs text-gray-500 hover:text-gray-300 underline">↻ Check for result</button>
+                  </div>
+                )}
+                {h2hStatus === 'complete' && me && them && (
+                  <div className="space-y-3">
+                    <div className={`rounded-xl p-3 text-center ${won ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                      <div className="text-xl mb-0.5">{won ? '🏆' : '😞'}</div>
+                      <div className={`font-extrabold text-sm ${won ? 'text-green-400' : 'text-red-400'}`}>
+                        {won ? 'You win!' : 'You lose.'} {me.score} vs {them.score}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {me.squad && (
+                        <a href={me.squad} className="py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold text-center block">Your Squad →</a>
+                      )}
+                      {them.squad && (
+                        <a href={them.squad} className="py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-white font-bold text-center block">{them.name || 'Their'} Squad →</a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Challenge head-to-head result */}
           {isChallenge && (
@@ -710,12 +816,6 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             </div>
           )}
 
-          {/* H2H: show send-your-score CTA prominently before anything else */}
-          {config?.isH2H && seed && (
-            <button onClick={handleChallenge} className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-extrabold transition-colors">
-              {challengeCopied ? '✓ Copied!' : '⚔️ Send My Score to Opponent'}
-            </button>
-          )}
 
           {/* Share */}
           <button onClick={handleShareImage} disabled={imgState === 'working'} className="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-300 disabled:opacity-60 text-gray-900 font-bold transition-colors">

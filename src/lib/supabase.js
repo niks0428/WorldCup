@@ -84,6 +84,52 @@ export async function fetchTopStreaks({ limit = 20, column = 'challenge_streak',
     .slice(0, limit)
 }
 
+// ── H2H Sessions ──────────────────────────────────────────────────────────────
+
+// Returns the raw session row, or null if none exists yet.
+export async function getH2HSession(seed) {
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/h2h_sessions?seed=eq.${encodeURIComponent(seed)}&select=*`,
+    { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+  )
+  if (!res.ok) return null
+  const data = await res.json()
+  return data[0] || null
+}
+
+// Save a player's H2H entry. Returns 'p1' (created session), 'p2' (joined and
+// complete), or 'full' (both slots already taken — e.g. page reload).
+export async function saveH2HEntry({ seed, formation, competition, name, score, tier, squadUrl }) {
+  const existing = await getH2HSession(seed)
+  if (!existing) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/h2h_sessions`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({
+        seed, formation,
+        competition: competition === 'pl' ? 'pl' : 'wc',
+        p1_name: name, p1_score: score, p1_tier: tier, p1_squad_url: squadUrl,
+      }),
+    })
+    if (!res.ok) throw new Error(`H2H insert failed: ${res.status}`)
+    return 'p1'
+  }
+  if (existing.p2_score != null) return 'full'
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/h2h_sessions?seed=eq.${encodeURIComponent(seed)}&p2_score=is.null`,
+    {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify({
+        p2_name: name, p2_score: score, p2_tier: tier, p2_squad_url: squadUrl,
+        p2_at: new Date().toISOString(),
+      }),
+    }
+  )
+  if (!res.ok) throw new Error(`H2H update failed: ${res.status}`)
+  return 'p2'
+}
+
 // ── Groups ────────────────────────────────────────────────────────────────────
 
 function randomCode() {

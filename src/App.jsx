@@ -13,6 +13,7 @@ import HowItWorksScreen from './components/HowItWorksScreen'
 import AchievementsScreen from './components/AchievementsScreen'
 import ChallengesScreen from './components/ChallengesScreen'
 import PoolScreen from './components/PoolScreen'
+import H2HResultScreen from './components/H2HResultScreen'
 import formations from './data/formations.json'
 import wcNew from './data/players_wc_new.json'
 import wcOld from './data/players_wc_old.json'
@@ -55,7 +56,9 @@ function h2hFromHash(hash) {
   if (!hash.startsWith('#h2h=')) return null
   const [formation, seed, compStr] = hash.slice(5).split('|')
   if (!formations[formation] || !seed) return null
-  return { formation, seed, mode: 'classic', isH2H: true, competition: compStr === 'pl' ? 'pl' : 'wc' }
+  let alreadyPlayed = false
+  try { alreadyPlayed = Boolean(localStorage.getItem(`ltt_h2h_${seed}`)) } catch {}
+  return { formation, seed, mode: 'classic', isH2H: true, competition: compStr === 'pl' ? 'pl' : 'wc', alreadyPlayed }
 }
 
 function challengeFromHash(hash) {
@@ -110,7 +113,8 @@ export default function App() {
       if (h2h) {
         setCompetition(h2h.competition)
         setConfig(h2h)
-        setScreen('draft')
+        // If we've already played this seed, go straight to the result comparison.
+        setScreen(h2h.alreadyPlayed ? 'h2h-result' : 'draft')
         return
       }
       const challenge = challengeFromHash(hash)
@@ -273,6 +277,13 @@ export default function App() {
           onBack={() => setScreen('setup')}
           onViewResults={seed => handleLeaderboard(seed, null)}
           competition={competition}
+        />
+      )}
+      {screen === 'h2h-result' && (
+        <H2HResultScreen
+          seed={config?.seed}
+          competition={competition}
+          onRestart={handleRestart}
         />
       )}
       {screen === 'group' && (
