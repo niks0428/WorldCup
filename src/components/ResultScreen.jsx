@@ -10,7 +10,7 @@ import { FlagImg } from '../lib/flags'
 import { playResult } from '../lib/sound'
 import { buildShareImage } from '../lib/shareImage'
 import { validateName } from '../lib/nameFilter'
-import { recordChallengeResult, getChallengeStreak } from '../lib/challengeStreak'
+import { recordChallengeResult, getChallengeStreak, setLastChallengeSeed } from '../lib/challengeStreak'
 
 function ordinal(n) {
   const s = ['th', 'st', 'nd', 'rd'], v = n % 100
@@ -179,7 +179,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
       .catch(() => setH2hStatus('idle'))
   }, [])
 
-  // Record H2H streak once when the comparison becomes available.
+  // Record H2H streak and submit to global leaderboard once when result is in.
   useEffect(() => {
     if (!h2hSession || h2hSession.p2_score == null || h2hStreakRef.current) return
     const streakKey = `ltt_h2h_streak_${seed}`
@@ -189,9 +189,20 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
     try { myData = JSON.parse(localStorage.getItem(`ltt_h2h_${seed}`)) } catch {}
     if (!myData) return
     const opponentScore = myData.role === 'p1' ? h2hSession.p2_score : h2hSession.p1_score
-    if (opponentScore != null) {
-      recordChallengeResult(myData.score > opponentScore, competition)
-      try { localStorage.setItem(streakKey, '1') } catch {}
+    if (opponentScore == null) return
+    const newStreak = recordChallengeResult(myData.score > opponentScore, competition)
+    try { localStorage.setItem(streakKey, '1') } catch {}
+    // Make the win count on the global leaderboard and wire up "View results".
+    setLastChallengeSeed(seed)
+    const playerName = getSavedName()
+    if (isConfigured && playerName) {
+      submitScore({
+        playerName, score, tier: tier.label,
+        formation, mode: mode || 'classic',
+        squadUrl: buildSquadUrl(slots, formation, mode),
+        seed, competition,
+        challengeStreak: newStreak.streak,
+      }).catch(() => {})
     }
   }, [h2hSession])
 

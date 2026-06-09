@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { getH2HSession } from '../lib/supabase'
-import { recordChallengeResult } from '../lib/challengeStreak'
+import { getH2HSession, submitScore, isConfigured } from '../lib/supabase'
+import { recordChallengeResult, setLastChallengeSeed } from '../lib/challengeStreak'
+
+const NAME_KEY = 'ltt_player_name'
+function getSavedName() { try { return localStorage.getItem(NAME_KEY) || '' } catch { return '' } }
 
 const STREAK_FLAG = seed => `ltt_h2h_streak_${seed}`
 
@@ -23,16 +26,25 @@ export default function H2HResultScreen({ seed, competition, onRestart }) {
     setStatus(s?.p2_score != null ? 'complete' : 'waiting')
   }
 
-  // Record streak once when we first see the complete result.
+  // Record streak and submit to global leaderboard once when result is first seen.
   useEffect(() => {
     if (status !== 'complete' || !session || !myData || streakRef.current) return
     const alreadyRecorded = localStorage.getItem(STREAK_FLAG(seed))
     if (alreadyRecorded) return
     streakRef.current = true
     const opponentScore = myData.role === 'p1' ? session.p2_score : session.p1_score
-    if (opponentScore != null) {
-      recordChallengeResult(myData.score > opponentScore, competition)
-      try { localStorage.setItem(STREAK_FLAG(seed), '1') } catch {}
+    if (opponentScore == null) return
+    const newStreak = recordChallengeResult(myData.score > opponentScore, competition)
+    try { localStorage.setItem(STREAK_FLAG(seed), '1') } catch {}
+    setLastChallengeSeed(seed)
+    const playerName = getSavedName()
+    if (isConfigured && playerName) {
+      submitScore({
+        playerName, score: myData.score, tier: myData.tier,
+        formation: session.formation, mode: 'classic',
+        squadUrl: myData.squadUrl, seed, competition,
+        challengeStreak: newStreak.streak,
+      }).catch(() => {})
     }
   }, [status, session])
 
