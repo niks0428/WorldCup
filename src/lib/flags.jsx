@@ -18,7 +18,8 @@ const ISO = {
   Uruguay: 'uy', USSR: 'su', USA: 'us', Wales: 'gb-wls', 'West Germany': 'de',
   Yugoslavia: 'rs', Albania: 'al', Algeria: 'dz', Austria: 'at',
   'Bosnia & Herzegovina': 'ba', Chile: 'cl', Georgia: 'ge',
-  'North Macedonia': 'mk', 'Ivory Coast': 'ci',
+  'North Macedonia': 'mk', 'Ivory Coast': 'ci', CIS: 'ru',
+  Finland: 'fi', Latvia: 'lv', 'Northern Ireland': 'gb-nir', Norway: 'no',
 }
 
 // Fallback emoji for the spin reel (text context only)
@@ -41,7 +42,8 @@ export const FLAG_EMOJI = {
   Wales: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'West Germany': '🇩🇪', Yugoslavia: '🇷🇸',
   Albania: '🇦🇱', Algeria: '🇩🇿', Austria: '🇦🇹',
   'Bosnia & Herzegovina': '🇧🇦', Chile: '🇨🇱', Georgia: '🇬🇪',
-  'Ivory Coast': '🇨🇮', 'North Macedonia': '🇲🇰',
+  'Ivory Coast': '🇨🇮', 'North Macedonia': '🇲🇰', CIS: '🇷🇺',
+  Finland: '🇫🇮', Latvia: '🇱🇻', 'Northern Ireland': '🏴󠁧󠁢󠁮󠁩󠁲󠁿', Norway: '🇳🇴',
 }
 
 export function flagUrl(nation) {
