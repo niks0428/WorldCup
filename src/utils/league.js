@@ -285,6 +285,9 @@ export function awardStats(slots, matches, rng, getOpponentPlayers, leagueMode =
   const pa = new Array(filled.length).fill(0)
   const matchScorers = []
 
+  // In tournament mode, track goals/assists scored against the user by opponent nations.
+  const oppTournamentStats = {}
+
   for (const m of matches) {
     const scorers = []
     for (let g = 0; g < m.gf; g++) {
@@ -294,14 +297,27 @@ export function awardStats(slots, matches, rng, getOpponentPlayers, leagueMode =
       if (rng() < 0.78 && filled.length > 1) pa[pickWeighted(aw, rng, si)]++
     }
     matchScorers.push(scorers)
-    // Consume RNG in the same pattern as before so existing results don't shift.
     if (m.ga > 0 && getOpponentPlayers) {
       const ops = getOpponentPlayers(m.opponent) || []
       if (ops.length) {
         const ow = ops.map(p => GOAL_W[p.pos] ?? 10)
         for (let g = 0; g < m.ga; g++) {
-          pickWeighted(ow, rng)
-          if (rng() < 0.78 && ops.length > 1) pickWeighted(ow, rng)
+          const si = pickWeighted(ow, rng)
+          if (!leagueMode) {
+            const op = ops[si]
+            const k = `${m.opponent}||${op.name}`
+            if (!oppTournamentStats[k]) oppTournamentStats[k] = { name: op.name, nation: m.opponent, position: op.pos, goals: 0, assists: 0, contributions: 0, team: null }
+            oppTournamentStats[k].goals++; oppTournamentStats[k].contributions++
+          }
+          if (rng() < 0.78 && ops.length > 1) {
+            const ai = pickWeighted(ow, rng)
+            if (!leagueMode) {
+              const ap = ops[ai]
+              const k = `${m.opponent}||${ap.name}`
+              if (!oppTournamentStats[k]) oppTournamentStats[k] = { name: ap.name, nation: m.opponent, position: ap.pos, goals: 0, assists: 0, contributions: 0, team: null }
+              oppTournamentStats[k].assists++; oppTournamentStats[k].contributions++
+            }
+          }
         }
       }
     }
@@ -311,6 +327,7 @@ export function awardStats(slots, matches, rng, getOpponentPlayers, leagueMode =
     name: s.player.name, position: s.position, team: null, nation: s.player.nation ?? null,
     goals: pg[i], assists: pa[i], contributions: pg[i] + pa[i],
   }))
+  const oppTournamentList = leagueMode ? [] : Object.values(oppTournamentStats)
 
   // Full-season stats for every player in CLUB_PLAYERS across all 19 opponents.
   // Only included in PL/league mode — tournament mode awards come from the user's XI only.
@@ -331,7 +348,7 @@ export function awardStats(slots, matches, rng, getOpponentPlayers, leagueMode =
     }
   }
 
-  const allStats = [...yourStats, ...seasonOppStats]
+  const allStats = [...yourStats, ...seasonOppStats, ...oppTournamentList]
   const goldenBoot     = allStats.reduce((b, p) => p.goals         > b.goals         ? p : b, allStats[0])
   const playerOfSeason = allStats.reduce((b, p) => p.contributions > b.contributions ? p : b, allStats[0])
   const playmaker      = allStats.reduce((b, p) => p.assists       > b.assists       ? p : b, allStats[0])
