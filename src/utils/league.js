@@ -148,7 +148,7 @@ export function simulateLeague(slots, score, seedInput) {
 
   // Distribute match goals across the XI for awards. Runs after all
   // tier/table RNG so it never changes any existing result or standing.
-  const { goldenBoot, playerOfSeason, playmaker, goldenGlove, matchScorers } = awardStats(slots, matches, rng, name => CLUB_PLAYERS[name] ?? [])
+  const { goldenBoot, playerOfSeason, playmaker, goldenGlove, matchScorers } = awardStats(slots, matches, rng, name => CLUB_PLAYERS[name] ?? [], true)
   matchScorers.forEach((s, i) => { if (matches[i]) matches[i].scorers = s })
 
   // Cup competitions — FA Cup, League Cup, Champions League.
@@ -276,7 +276,7 @@ const CLUB_PLAYERS = {
   'Sunderland':         [{ name: 'R. Stewart',         pos: 'CAM' }, { name: 'E. Embleton',     pos: 'CM'  }],
 }
 
-export function awardStats(slots, matches, rng, getOpponentPlayers) {
+export function awardStats(slots, matches, rng, getOpponentPlayers, leagueMode = false) {
   const filled = slots.filter(s => s.player)
   if (!filled.length) return { goldenBoot: null, playerOfSeason: null, playerOfTournament: null, playmaker: null, goldenGlove: null, matchScorers: matches.map(() => []) }
   const gw = filled.map(s => GOAL_W[s.position] ?? 3)
@@ -313,19 +313,21 @@ export function awardStats(slots, matches, rng, getOpponentPlayers) {
   }))
 
   // Full-season stats for every player in CLUB_PLAYERS across all 19 opponents.
-  // Goals calibrated so a top-club striker averages ~20-25/season; playmakers ~12-18 assists.
+  // Only included in PL/league mode — tournament mode awards come from the user's XI only.
   const SQUAD_GW = 55   // typical sum of GOAL_W for a balanced XI
   const SQUAD_AW = 60   // typical sum of ASSIST_W
   const seasonOppStats = []
-  for (const [team, players] of Object.entries(CLUB_PLAYERS)) {
-    const str = OPPONENTS.find(o => o.name === team)?.str ?? 70
-    const gpg = Math.max(0.8, 0.7 + (str - 65) * 0.06)   // 0.8 (bottom) → ~1.8 (elite)
-    for (const p of players) {
-      const goalW  = GOAL_W[p.pos]   ?? 5
-      const assistW = ASSIST_W[p.pos] ?? 6
-      const goals   = Math.max(0, Math.round(38 * gpg * goalW  / SQUAD_GW         + (rng() - 0.5) * 7))
-      const assists = Math.max(0, Math.round(38 * gpg * assistW / SQUAD_AW * 1.3  + (rng() - 0.5) * 5))
-      seasonOppStats.push({ name: p.name, position: p.pos, team, goals, assists, contributions: goals + assists })
+  if (leagueMode) {
+    for (const [team, players] of Object.entries(CLUB_PLAYERS)) {
+      const str = OPPONENTS.find(o => o.name === team)?.str ?? 70
+      const gpg = Math.max(0.8, 0.7 + (str - 65) * 0.06)   // 0.8 (bottom) → ~1.8 (elite)
+      for (const p of players) {
+        const goalW  = GOAL_W[p.pos]   ?? 5
+        const assistW = ASSIST_W[p.pos] ?? 6
+        const goals   = Math.max(0, Math.round(38 * gpg * goalW  / SQUAD_GW         + (rng() - 0.5) * 7))
+        const assists = Math.max(0, Math.round(38 * gpg * assistW / SQUAD_AW * 1.3  + (rng() - 0.5) * 5))
+        seasonOppStats.push({ name: p.name, position: p.pos, team, goals, assists, contributions: goals + assists })
+      }
     }
   }
 
@@ -341,11 +343,13 @@ export function awardStats(slots, matches, rng, getOpponentPlayers) {
     ? { name: gkFilled.player.name, position: 'GK', team: null, nation: gkFilled.player.nation ?? null, cleanSheets: userCS }
     : null
 
-  const oppGKs = OPPONENTS.map(o => {
-    const base  = Math.round(5 + (o.str - 65) * 0.6)          // ~5 (bottom) → ~16 (elite)
-    const noise = Math.round((rng() - 0.5) * 10)              // ±5 games variance
-    return { name: o.name, position: 'GK', team: o.name, cleanSheets: Math.max(1, Math.min(24, base + noise)) }
-  })
+  const oppGKs = leagueMode
+    ? OPPONENTS.map(o => {
+        const base  = Math.round(5 + (o.str - 65) * 0.6)
+        const noise = Math.round((rng() - 0.5) * 10)
+        return { name: o.name, position: 'GK', team: o.name, cleanSheets: Math.max(1, Math.min(24, base + noise)) }
+      })
+    : []
 
   const allGKs = [...oppGKs, ...(userGK ? [userGK] : [])]
   const goldenGlove = allGKs.reduce((best, gk) => gk.cleanSheets > best.cleanSheets ? gk : best, allGKs[0])
