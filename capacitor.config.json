@@ -1,0 +1,20 @@
+{
+  "appId": "online.liftthetrophy.app",
+  "appName": "Lift the Trophy",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#111827",
+      "androidSplashResourceName": "splash",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#111827"
+    }
+  }
+}
