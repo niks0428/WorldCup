@@ -49,7 +49,7 @@ function squadFromHash(hash) {
     if (!entry) return { ...slot, player: null }
     return { ...slot, player: lookup[`${entry.n}|${entry.na}|${entry.y}|${entry.t}`] || null }
   })
-  return { slots, formation: data.f, mode: data.m }
+  return { slots, formation: data.f, mode: data.m, seed: data.k || null }
 }
 
 function h2hFromHash(hash) {
@@ -105,7 +105,9 @@ export default function App() {
         const comp = shared.slots.some(s => s.player?.tournament === 'PL') ? 'pl' : 'wc'
         setCompetition(comp)
         setFinalSlots(shared.slots)
-        setConfig({ formation: shared.formation, mode: shared.mode, competition: comp })
+        // isSharedView blocks auto-submit in ResultScreen — we're just viewing,
+        // not claiming this squad as our own score. seed replays the same run.
+        setConfig({ formation: shared.formation, mode: shared.mode, competition: comp, seed: shared.seed || null, isSharedView: true })
         setScreen('result')
         return
       }
@@ -254,7 +256,10 @@ export default function App() {
           streak={streak.streak}
           groupCode={currentGroup?.code}
           onRestart={handleRestart}
-          onLeaderboard={() => handleLeaderboard(config?.seed, currentGroup?.code)}
+          onLeaderboard={() => handleLeaderboard(
+            (config?.isChallenge || config?.mode === 'daily' || config?.isH2H) ? config?.seed : null,
+            currentGroup?.code
+          )}
         />
       )}
       {screen === 'leaderboard' && (

@@ -24,7 +24,7 @@ function b64Decode(str) {
   return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''))
 }
 
-export function encodeSquad(slots, formation, mode) {
+export function encodeSquad(slots, formation, mode, seed) {
   const data = {
     f: formation, m: mode || 'classic',
     s: slots.filter(s => s.player).map(s => ({
@@ -32,6 +32,7 @@ export function encodeSquad(slots, formation, mode) {
       y: s.player.year, t: s.player.tournament,
     })),
   }
+  if (seed) data.k = seed
   return b64Encode(JSON.stringify(data))
 }
 
@@ -39,8 +40,8 @@ export function decodeSquad(encoded) {
   try { return JSON.parse(b64Decode(encoded)) } catch { return null }
 }
 
-function buildSquadUrl(slots, formation, mode) {
-  return `${window.location.href.split('#')[0]}#s=${encodeSquad(slots, formation, mode)}`
+function buildSquadUrl(slots, formation, mode, seed) {
+  return `${window.location.href.split('#')[0]}#s=${encodeSquad(slots, formation, mode, seed)}`
 }
 
 function buildChallengeUrl(formation, seed, score, name, competition) {
@@ -90,6 +91,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
   const h2hStreakRef = useRef(false)
   const isDaily = mode === 'daily'
   const inGroup = Boolean(groupCode)
+  const isSharedView = Boolean(config?.isSharedView)
 
   // Head-to-head challenge: the link carried the challenger's score (+ name), so
   // this result is a direct win/loss that drives the challenge win streak.
@@ -111,7 +113,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
   }, [])
 
   async function doSubmit(playerName) {
-    const squadUrl = buildSquadUrl(slots, formation, mode)
+    const squadUrl = buildSquadUrl(slots, formation, mode, seed)
     const today = new Date().toISOString().split('T')[0]
     await submitScore({
       playerName, score, tier: tier.label,
@@ -138,9 +140,11 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
     return () => clearTimeout(t)
   }, [])
 
-  // Auto-submit to global (+ group) whenever a saved name exists
+  // Auto-submit to global (+ group) whenever a saved name exists.
+  // Skip when this result screen was loaded from a shared View link — in that
+  // case we're just watching someone else's squad, not claiming their score.
   useEffect(() => {
-    if (!isConfigured || autoSubmitted) return
+    if (!isConfigured || autoSubmitted || config?.isSharedView) return
     const savedName = getSavedName()
     if (!savedName) return // first time — wait for manual entry
     setSubmitState('submitting')
@@ -772,14 +776,21 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
         </div>
 
         <div className="space-y-3">
-          {/* Submit panel */}
-          {isConfigured && submitState === 'submitting' && (
+          {/* Viewing someone else's squad — read-only banner, no submit */}
+          {isSharedView && (
+            <div className="bg-gray-800 rounded-xl p-3 text-center">
+              <div className="text-gray-400 text-sm">👀 Viewing shared squad</div>
+            </div>
+          )}
+
+          {/* Submit panel — hidden when viewing a shared squad */}
+          {!isSharedView && isConfigured && submitState === 'submitting' && (
             <div className="bg-gray-800 rounded-xl p-3 text-center text-gray-400 text-sm animate-pulse">
               Submitting to leaderboard…
             </div>
           )}
 
-          {isConfigured && submitState !== 'done' && submitState !== 'submitting' && (
+          {!isSharedView && isConfigured && submitState !== 'done' && submitState !== 'submitting' && (
             <div className={`rounded-xl p-3 space-y-2 ${getSavedName() ? 'bg-gray-800' : 'bg-yellow-400/10 border border-yellow-400/30'}`}>
               {!getSavedName() ? (
                 <>
@@ -815,7 +826,7 @@ export default function ResultScreen({ slots, formation, mode, seed, competition
             </div>
           )}
 
-          {isConfigured && submitState === 'done' && (
+          {!isSharedView && isConfigured && submitState === 'done' && (
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-center">
               <div className="text-green-400 font-bold text-sm">
                 ✓ On the leaderboard{inGroup ? ' & group' : ''}!
