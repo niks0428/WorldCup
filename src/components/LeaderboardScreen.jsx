@@ -65,7 +65,7 @@ const MODE_TABS = [
   { id: 'hardcore', label: '💀' },
 ]
 const SORT_TABS = [
-  { id: 'wins',      label: 'Wins',      plOnly: true },
+  { id: 'points',    label: 'Points',    plOnly: true },
   { id: 'placement', label: 'Placement' },
   { id: 'rating',    label: 'Rating' },
   { id: 'gd',        label: 'Goal Diff' },
@@ -75,6 +75,7 @@ const SORT_TABS = [
 
 // The chosen sort field's raw value for a row. 'desc' = highest value first.
 function primaryVal(s, sortBy, tierRank) {
+  if (sortBy === 'points') return s._pts
   if (sortBy === 'wins')   return s._won
   if (sortBy === 'rating') return s.score
   if (sortBy === 'gd')     return s._gd
@@ -99,7 +100,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
   const showCompToggle = !challengeSeed && !groupCode
   const [timeFilter, setTimeFilter] = useState('alltime')
   const [modeFilter, setModeFilter] = useState('all')
-  const [sortBy, setSortBy] = useState(competition === 'pl' ? 'wins' : 'placement')
+  const [sortBy, setSortBy] = useState(competition === 'pl' ? 'points' : 'placement')
   const [sortDir, setSortDir] = useState('desc')
   // Scores vs. challenge win-streak board. Streaks are global only — a specific
   // challenge or group view stays on its scores list.
@@ -111,7 +112,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
 
   // Reset sort to the natural default when switching competitions.
   useEffect(() => {
-    setSortBy(comp === 'pl' ? 'wins' : 'placement')
+    setSortBy(comp === 'pl' ? 'points' : 'placement')
     setSortDir('desc')
   }, [comp])
 
@@ -125,11 +126,12 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
       seed: challengeSeed || undefined,
       groupCode: groupCode || undefined,
       competition: comp,
+      scoreOrder: sortDir === 'asc' ? 'asc' : 'desc',
     })
       .then(setScores)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
-  }, [modeFilter, timeFilter, challengeSeed, groupCode, board, comp])
+  }, [modeFilter, timeFilter, challengeSeed, groupCode, board, comp, sortDir])
 
   useEffect(() => {
     if (!isConfigured || board !== 'streaks') return
@@ -157,14 +159,22 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
           _won:   run.won   ?? 0,
           _drawn: run.drawn ?? 0,
           _lost:  run.lost  ?? 0,
+          _pts:   run.points ?? ((run.won ?? 0) * 3 + (run.drawn ?? 0)),
         }
       })
-      // Sort by the chosen field + direction, then a stable best-first chain
-      // (wins → placement → rating → goal difference → earliest) to break ties.
+      // Sort by the chosen field + direction, then a stable best-first chain.
+      // PL default (points): pts → score → GD → earliest.
+      // Everything else: wins → placement → rating → GD → earliest.
       .sort((a, b) => {
         const diff = primaryVal(b, sortBy, tierRank) - primaryVal(a, sortBy, tierRank)
         if (diff) return sortDir === 'asc' ? -diff : diff
-        return (b._won - a._won) ||
+        if (sortBy === 'points') {
+          return b.score - a.score ||
+            b._gd - a._gd ||
+            new Date(a.created_at) - new Date(b.created_at)
+        }
+        return (b._pts - a._pts) ||
+          (b._won - a._won) ||
           (tierRank[b.tier] || 0) - (tierRank[a.tier] || 0) ||
           b.score - a.score ||
           b._gd - a._gd ||

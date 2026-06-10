@@ -29,10 +29,10 @@ export async function submitScore({ playerName, score, tier, formation, mode, sq
   if (!res.ok) throw new Error(`Submit failed: ${res.status}`)
 }
 
-export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', seed, groupCode, competition = 'wc' } = {}) {
+export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', seed, groupCode, competition = 'wc', scoreOrder = 'desc' } = {}) {
   const params = new URLSearchParams()
   params.set('select', '*')
-  params.set('order', 'score.desc,created_at.asc')
+  params.set('order', `score.${scoreOrder},created_at.${scoreOrder === 'desc' ? 'asc' : 'desc'}`)
   params.set('limit', '50')
 
   if (groupCode) {
