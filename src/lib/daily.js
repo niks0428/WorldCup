@@ -1,5 +1,11 @@
 import { makeRng } from './seededRandom'
 
+const DAILY_FORMATIONS = [
+  '4-3-3', '4-4-2', '4-2-3-1', '3-5-2', '4-3-3 (2)',
+  '5-3-2', '4-1-4-1', '3-4-3', '4-5-1', '4-4-2 (2)',
+  '3-4-1-2', '4-3-2-1', '4-2-3-1 (2)', '5-2-3', '4-1-2-1-2',
+]
+
 // Per-competition completion key. World Cup keeps the legacy key so existing
 // "done today" state survives; Premier League gets its own.
 function doneKey(competition) {
@@ -15,6 +21,11 @@ export const DAILY_DIFFICULTIES = ['classic', 'expert', 'hardcore']
 export function dailyDifficulty(competition = 'wc', date = new Date().toISOString().split('T')[0]) {
   const r = makeRng(`difficulty|${competition}|${date}`)()
   return DAILY_DIFFICULTIES[Math.floor(r * DAILY_DIFFICULTIES.length)]
+}
+
+export function dailyFormation(competition = 'wc', date = new Date().toISOString().split('T')[0]) {
+  const r = makeRng(`formation|${competition}|${date}`)()
+  return DAILY_FORMATIONS[Math.floor(r * DAILY_FORMATIONS.length)]
 }
 
 export const DIFFICULTY_LABEL = {

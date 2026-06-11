@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { isConfigured } from '../lib/supabase'
 import { todaySeed, randomSeed } from '../lib/seededRandom'
-import { isDailyDoneToday, timeUntilNextDaily, dailyDifficulty, DIFFICULTY_LABEL } from '../lib/daily'
+import { isDailyDoneToday, timeUntilNextDaily, dailyDifficulty, dailyFormation, DIFFICULTY_LABEL } from '../lib/daily'
 import { isMuted, toggleMuted } from '../lib/sound'
 import { getChallengeStreak } from '../lib/challengeStreak'
 import Logo from './Logo'
@@ -73,7 +73,7 @@ const ERA_OPTIONS = [
   { id: 'modern', label: 'Modern' },
 ]
 
-export default function SetupScreen({ competition = 'wc', onStart, onBack, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, onChallenges, onPlayers, streak, currentGroup }) {
+export default function SetupScreen({ competition = 'wc', onStart, onBack, onLeaderboard, onPrivacy, onHistory, onGroup, onHowItWorks, onAchievements, onChallenges, onPlayers, onStats, streak, currentGroup }) {
   const isPL = competition === 'pl'
   const [mode, setMode] = useState('classic')
   const [formation, setFormation] = useState('4-3-3')
@@ -95,6 +95,7 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
   const todayDifficulty = dailyDifficulty(competition)
+  const todayFormationLock = dailyFormation(competition)
   const hasStreak = streak?.streak > 0
   const hasChallengeStreak = challengeStreak?.streak > 0
 
@@ -165,20 +166,21 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
                   <span className="text-gray-400 font-extrabold text-base">✅ Daily Complete</span>
                   {hasStreak && <span className="text-xs text-orange-400 font-bold">🔥 {streak.streak}</span>}
                 </div>
-                <div className="text-gray-500 text-xs">Today was {DIFFICULTY_LABEL[todayDifficulty]} · Next in {countdown}</div>
+                <div className="text-gray-500 text-xs">Today was {DIFFICULTY_LABEL[todayDifficulty]} · <span className="font-mono">{todayFormationLock}</span> · Next in {countdown}</div>
               </div>
             </div>
           </div>
         ) : (
           <button
-            onClick={() => onStart({ mode: 'daily', difficulty: todayDifficulty, formation, seed: todaySeed(), isDaily: true })}
+            onClick={() => onStart({ mode: 'daily', difficulty: todayDifficulty, formation: todayFormationLock, seed: todaySeed(), isDaily: true })}
             className="w-full rounded-2xl border-2 border-yellow-400/60 bg-yellow-400/10 hover:bg-yellow-400/20 p-4 text-left transition-all group"
           >
             <div className="flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <span className="text-yellow-400 font-extrabold text-base">⭐ Daily Challenge</span>
                   <span className="text-[10px] bg-gray-800 text-gray-300 font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">{DIFFICULTY_LABEL[todayDifficulty]}</span>
+                  <span className="text-[10px] bg-yellow-400/20 text-yellow-300 font-mono font-bold px-1.5 py-0.5 rounded border border-yellow-400/30">🔒 {todayFormationLock}</span>
                   {hasStreak && <span className="text-xs text-orange-400 font-bold">🔥 {streak.streak}</span>}
                 </div>
                 <div className="text-gray-400 text-xs">Everyone gets the same spins · {today}</div>
@@ -370,9 +372,10 @@ export default function SetupScreen({ competition = 'wc', onStart, onBack, onLea
         {/* Nav buttons — 2-column grid */}
         <div className="grid grid-cols-2 gap-2">
           <button onClick={onHistory}      className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">📋 History</button>
-          <button onClick={onHowItWorks}   className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">ℹ️ How to Score</button>
+          <button onClick={onStats}        className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">📊 My Stats</button>
           <button onClick={onAchievements} className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">🏆 Achievements</button>
           <button onClick={onChallenges}   className="py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">🤝 Challenges</button>
+          <button onClick={onHowItWorks}   className="col-span-2 py-2.5 rounded-xl border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white text-sm font-bold transition-colors">ℹ️ How to Score</button>
         </div>
 
         {/* Browse everyone in the spin pool */}

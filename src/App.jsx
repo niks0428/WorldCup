@@ -12,6 +12,8 @@ import RunRevealScreen from './components/RunRevealScreen'
 import HowItWorksScreen from './components/HowItWorksScreen'
 import AchievementsScreen from './components/AchievementsScreen'
 import ChallengesScreen from './components/ChallengesScreen'
+import StatsScreen from './components/StatsScreen'
+import GuessScreen from './components/GuessScreen'
 import PoolScreen from './components/PoolScreen'
 import H2HResultScreen from './components/H2HResultScreen'
 import formations from './data/formations.json'
@@ -217,7 +219,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       {screen === 'home' && (
-        <HomeScreen onSelect={handleSelectCompetition} />
+        <HomeScreen onSelect={handleSelectCompetition} onGuess={() => setScreen('guess')} />
       )}
       {screen === 'setup' && (
         <SetupScreen
@@ -232,6 +234,7 @@ export default function App() {
           onAchievements={() => setScreen('achievements')}
           onChallenges={() => setScreen('challenges')}
           onPlayers={() => setScreen('pool')}
+          onStats={() => setScreen('stats')}
           streak={streak}
           currentGroup={currentGroup}
         />
@@ -277,6 +280,8 @@ export default function App() {
       {screen === 'howto' && <HowItWorksScreen onBack={() => setScreen('setup')} />}
       {screen === 'pool' && <PoolScreen competition={competition} onBack={() => setScreen('setup')} />}
       {screen === 'achievements' && <AchievementsScreen onBack={() => setScreen('setup')} />}
+      {screen === 'stats' && <StatsScreen onBack={() => setScreen('setup')} />}
+      {screen === 'guess' && <GuessScreen onBack={() => setScreen('home')} />}
       {screen === 'challenges' && (
         <ChallengesScreen
           onBack={() => setScreen('setup')}

@@ -43,7 +43,10 @@ export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', 
     // The two competitions are separate boards.
     params.set('competition', `eq.${competition === 'pl' ? 'pl' : 'wc'}`)
     if (modeFilter !== 'all') params.set('mode', `eq.${modeFilter}`)
-    if (timeFilter === 'week') {
+    if (timeFilter === 'month') {
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      params.set('created_at', `gte.${monthAgo}`)
+    } else if (timeFilter === 'week') {
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
       params.set('created_at', `gte.${weekAgo}`)
     } else if (timeFilter === 'daily') {
@@ -56,6 +59,25 @@ export async function fetchScores({ modeFilter = 'all', timeFilter = 'alltime', 
   const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?${params}`, { headers: headers() })
   if (!res.ok) throw new Error(`Fetch failed: ${res.status}`)
   return res.json()
+}
+
+// Yesterday's top-scoring entry with a squad URL (for Squad of the Day widget).
+export async function fetchYesterdayBest(competition = 'wc') {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const dayStart = `${yesterday}T00:00:00.000Z`
+  const dayEnd   = `${yesterday}T23:59:59.999Z`
+  const params = new URLSearchParams()
+  params.set('select', 'player_name,score,tier,formation,mode,squad_url,created_at')
+  params.set('competition', `eq.${competition === 'pl' ? 'pl' : 'wc'}`)
+  params.set('created_at', `gte.${dayStart}`)
+  params.set('created_at', `lte.${dayEnd}`)
+  params.set('squad_url', 'not.is.null')
+  params.set('order', 'score.desc,created_at.asc')
+  params.set('limit', '1')
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/scores?${params}`, { headers: headers() })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data[0] || null
 }
 
 // Highest streaks for a given column ('challenge_streak' = head-to-head wins,

@@ -1,5 +1,12 @@
 import { ALL_ACHIEVEMENTS, getUnlockedAchievements } from '../lib/achievements'
 
+const RARITY_STYLE = {
+  common:    { label: 'Common',    cls: 'bg-gray-700 text-gray-400' },
+  uncommon:  { label: 'Uncommon',  cls: 'bg-sky-900/60 text-sky-400' },
+  rare:      { label: 'Rare',      cls: 'bg-violet-900/60 text-violet-400' },
+  legendary: { label: 'Legendary', cls: 'bg-yellow-900/60 text-yellow-400' },
+}
+
 const CATEGORIES = [
   { id: 'squad',       label: '⚽ Squad Quality' },
   { id: 'tournament',  label: '🥅 Tournament Run' },
@@ -58,8 +65,18 @@ export default function AchievementsScreen({ onBack }) {
                         {a.icon}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className={`font-bold text-sm ${isUnlocked ? 'text-white' : 'text-gray-600'}`}>
-                          {a.label}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`font-bold text-sm ${isUnlocked ? 'text-white' : 'text-gray-600'}`}>
+                            {a.label}
+                          </span>
+                          {a.rarity && (() => {
+                            const r = RARITY_STYLE[a.rarity]
+                            return r ? (
+                              <span className={`text-[9px] font-bold px-1.5 py-px rounded uppercase tracking-wider ${r.cls} ${isUnlocked ? '' : 'opacity-40'}`}>
+                                {r.label}
+                              </span>
+                            ) : null
+                          })()}
                         </div>
                         <div className={`text-xs ${isUnlocked ? 'text-gray-400' : 'text-gray-700'}`}>
                           {a.desc}

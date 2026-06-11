@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { fetchScores, fetchTopStreaks, isConfigured } from '../lib/supabase'
+import { fetchScores, fetchTopStreaks, fetchYesterdayBest, isConfigured } from '../lib/supabase'
 import { decodeSquad } from './ResultScreen'
 import { simulateTournament } from '../utils/tournament'
 import { simulateLeague, LEAGUE_TIER_META } from '../utils/league'
@@ -55,6 +55,7 @@ const PL_TIER_RANK = Object.fromEntries(PL_LABELS.map((m, i) => [m.label, PL_LAB
 
 const TIME_TABS = [
   { id: 'alltime', label: 'All Time' },
+  { id: 'month',   label: 'This Month' },
   { id: 'week',    label: 'This Week' },
   { id: 'daily',   label: '⭐ Today' },
 ]
@@ -109,6 +110,7 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
   const [dailyStreaks, setDailyStreaks] = useState([])
   const showStreakToggle = !challengeSeed && !groupCode
   const myName = getSavedName()
+  const [squadOfDay, setSquadOfDay] = useState(null)
 
   // Reset sort to the natural default when switching competitions.
   useEffect(() => {
@@ -132,6 +134,11 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
   }, [modeFilter, timeFilter, challengeSeed, groupCode, board, comp, sortDir])
+
+  useEffect(() => {
+    if (!isConfigured || challengeSeed || groupCode) return
+    fetchYesterdayBest(comp).then(setSquadOfDay).catch(() => {})
+  }, [comp])
 
   useEffect(() => {
     if (!isConfigured || board !== 'streaks') return
@@ -246,6 +253,34 @@ export default function LeaderboardScreen({ onBack, challengeSeed, groupCode, co
 
       {isConfigured && (
         <>
+          {/* Squad of the Day */}
+          {board === 'scores' && !challengeSeed && !groupCode && squadOfDay && safeHttpUrl(squadOfDay.squad_url) && (
+            <div className="rounded-2xl border border-yellow-400/30 bg-yellow-400/5 p-3 mb-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-yellow-400 text-xs font-extrabold uppercase tracking-widest">🌟 Yesterday's Best</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-bold text-sm truncate">{squadOfDay.player_name}</div>
+                  <div className="text-gray-400 text-xs truncate">
+                    {(isPL ? PL_TIER_EMOJI : WC_TIER_EMOJI)[squadOfDay.tier] || ''} {squadOfDay.tier} · {squadOfDay.formation}
+                  </div>
+                </div>
+                <div className="text-right shrink-0 flex items-center gap-2">
+                  <span className="text-yellow-400 font-extrabold text-lg">{squadOfDay.score}</span>
+                  <a
+                    href={safeHttpUrl(squadOfDay.squad_url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold px-2 py-1 rounded-lg bg-yellow-400/20 text-yellow-300 hover:bg-yellow-400/30 transition-colors"
+                  >
+                    View →
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Time filter */}
           {board === 'scores' && !challengeSeed && (
             <div className="flex gap-2 mb-3">

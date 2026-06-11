@@ -4,6 +4,7 @@ export default function PitchView({
   slots, phase, compatibleSlotIds = [], swapSlotIds = [], assignedSlotId,
   onPlacePlayer, onSwap,
   canMove = false, movingSlotId = null, moveTargetIds = [], swapMoveTargetIds = [], onSelectForMove, onMoveTo,
+  onPlayerClick,
 }) {
   return (
     <div
@@ -39,6 +40,7 @@ export default function PitchView({
           swapMoveTarget={swapMoveTargetIds.includes(slot.id)}
           onSelectForMove={onSelectForMove}
           onMoveTo={onMoveTo}
+          onPlayerClick={onPlayerClick}
         />
       ))}
     </div>
@@ -47,7 +49,7 @@ export default function PitchView({
 
 function PlayerCard({
   slot, phase, compatible, assigned, onPlace, onSwap, swapTarget,
-  canMove, movingSlotId, moveTarget, swapMoveTarget, onSelectForMove, onMoveTo,
+  canMove, movingSlotId, moveTarget, swapMoveTarget, onSelectForMove, onMoveTo, onPlayerClick,
 }) {
   const left = `${slot.x}%`
   const top = `${slot.y}%`
@@ -106,12 +108,14 @@ function PlayerCard({
   // Another placed player the picked-up player can swap with (idle move).
   const isSwapMoveTarget = isIdle && moving && !isMovingSelf && swapMoveTarget
   const dimmedFilled = (isPlacing && !swapTarget) || (isIdle && moving && !isMovingSelf && !swapMoveTarget)
-  const clickable = isSwap || isMovingSelf || selectableForMove || isSwapMoveTarget
+  const viewable = !phase && !moving && Boolean(onPlayerClick)
+  const clickable = isSwap || isMovingSelf || selectableForMove || isSwapMoveTarget || viewable
 
   function handleClick() {
     if (isSwap) onSwap?.(slot.id)
     else if (isSwapMoveTarget) onMoveTo?.(slot.id)
     else if (isMovingSelf || selectableForMove) onSelectForMove?.(slot.id)
+    else if (!phase && !moving && onPlayerClick) onPlayerClick?.(slot.player)
   }
 
   return (

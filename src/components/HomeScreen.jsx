@@ -1,8 +1,6 @@
 import Logo from './Logo'
 
-// First screen: pick the competition. World Cup is the original game; Premier
-// League is the 38-0-0 unbeaten-season mode.
-export default function HomeScreen({ onSelect }) {
+export default function HomeScreen({ onSelect, onGuess }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen px-4 py-10">
       <div className="text-center mb-8">
@@ -42,6 +40,20 @@ export default function HomeScreen({ onSelect }) {
               <div className="text-gray-400 text-sm mt-0.5">Draft a club XI from FIFA history. Go <span className="font-bold text-white">38-0-0</span> — win every game, unbeaten.</div>
             </div>
             <span className="text-sky-400 text-2xl group-hover:translate-x-1 transition-transform">→</span>
+          </div>
+        </button>
+
+        <button
+          onClick={onGuess}
+          className="rounded-2xl border-2 border-violet-400/60 bg-violet-400/10 hover:bg-violet-400/20 p-5 text-left transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-5xl">🧠</span>
+            <div className="flex-1">
+              <div className="text-violet-400 font-extrabold text-xl">Guess the Player</div>
+              <div className="text-gray-400 text-sm mt-0.5">See the stats — name the player. WC/Euro &amp; PL modes.</div>
+            </div>
+            <span className="text-violet-400 text-2xl group-hover:translate-x-1 transition-transform">→</span>
           </div>
         </button>
       </div>
