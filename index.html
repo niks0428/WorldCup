@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Lift the Trophy" />
@@ -15,14 +14,9 @@
     <meta property="og:description" content="Build your ultimate World Cup &amp; Euro XI. Spin. Draft. Lift." />
     <meta property="og:url" content="https://liftthetrophy.online" />
     <title>Lift the Trophy</title>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'))
-      }
-    </script>
     <script type="module" crossorigin src="/assets/index-Bz5mRmka.js"></script>
     <link rel="stylesheet" crossorigin href="/assets/index-Dgz1QVTy.css">
-  </head>
+  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
   </body>
